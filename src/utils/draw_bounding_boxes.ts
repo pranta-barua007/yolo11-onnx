@@ -22,6 +22,8 @@ export async function draw_bounding_boxes(
 
   const diagonalLength = Math.sqrt(Math.pow(overlay_el.width, 2) + Math.pow(overlay_el.height, 2));
   const lineWidth = diagonalLength / 250;
+  const fontSize = Math.max(14, Math.round(diagonalLength / 60));
+  const pad = Math.round(fontSize * 0.3);
 
   predictions.forEach((predict, idx) => {
     const isFiltered = filterIndex !== null && idx !== filterIndex;
@@ -39,21 +41,20 @@ export async function draw_bounding_boxes(
     // Only draw label for non-dimmed boxes
     if (!isFiltered) {
       ctx.fillStyle = rgbaBorderColor;
-      ctx.font = "16px Arial";
+      ctx.font = `bold ${fontSize}px Arial`;
       const text = `${classes[predict.class_idx]} ${predict.score.toFixed(2)}`;
       const textWidth = ctx.measureText(text).width;
-      const textHeight = parseInt(ctx.font, 10);
 
-      let textY = y1 - 5;
-      let rectY = y1 - textHeight - 4;
+      let textY = y1 - pad;
+      let rectY = y1 - fontSize - pad * 2;
       if (rectY < 0) {
-        textY = y1 + textHeight + 5;
+        textY = y1 + fontSize + pad;
         rectY = y1 + 1;
       }
 
-      ctx.fillRect(x1 - 1, rectY, textWidth + 4, textHeight + 4);
+      ctx.fillRect(x1 - 1, rectY, textWidth + pad * 2, fontSize + pad * 2);
       ctx.fillStyle = "white";
-      ctx.fillText(text, x1, textY);
+      ctx.fillText(text, x1 + pad - 1, textY);
     }
   });
 }
