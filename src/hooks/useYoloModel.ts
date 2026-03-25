@@ -1,83 +1,152 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { InferenceSession } from "onnxruntime-web";
-import { model_loader } from "../utils/model_loader";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { CustomModel } from "../utils/types";
+import { isWebGPUSupported } from "../utils/gpu_check";
+import defaultClasses from "../utils/yolo_classes.json";
 
 const input_shape = [1, 3, 640, 640];
-const iou_threshold = 0.35;
-const score_threshold = 0.45;
-const config = { input_shape, iou_threshold, score_threshold };
+const iou_threshold = 0.25;
+const score_threshold = 0.55;
 
+/**
+ * Manages the YOLO model lifecycle via Web Worker.
+ *
+ * The model is loaded ONLY in the worker (not on main thread),
+ * keeping GPU/WASM memory usage to a single copy.
+ * Both image mode and camera mode route through the same worker.
+ */
 export function useYoloModel() {
   const [customModels, setCustomModels] = useState<CustomModel[]>([]);
   const [isModelLoaded, setIsModelLoaded] = useState<boolean>(false);
   const [warmUpTime, setWarmUpTime] = useState<string>("0");
-  const sessionRef = useRef<InferenceSession>(null);
-  const modelStatusRef = useRef<HTMLParagraphElement>(null);
-  const deviceRef = useRef<HTMLSelectElement>(null);
-  const modelRef = useRef<HTMLSelectElement>(null);
+  const [device, setDevice] = useState<string>(isWebGPUSupported() ? "webgpu" : "wasm");
+  const [modelName, setModelName] = useState<string>("yolo11n-seg");
+  const [modelStatus, setModelStatus] = useState<string>("Loading model...");
 
-  const loadModel = async () => {
-    if (!modelStatusRef.current || !deviceRef.current || !modelRef.current) return;
-    
-    const modelStatusEl = modelStatusRef.current;
-    modelStatusEl.textContent = "Loading model...";
-    modelStatusEl.style.color = "red";
+  // Web Worker — sole owner of the ONNX session
+  const workerRef = useRef<Worker | null>(null);
+  const workerReadyRef = useRef<boolean>(false);
+
+  // Active classes for the currently selected model
+  const activeClasses = (() => {
+    const customModel = customModels.find((m) => m.url === modelName);
+    return customModel ? customModel.classes : defaultClasses;
+  })();
+
+  const config = { input_shape, iou_threshold, score_threshold, classes: activeClasses };
+
+  // Track whether a load is already in-flight
+  const loadingRef = useRef<boolean>(false);
+
+  /** Initialize the inference worker (call once on mount) */
+  const initWorker = useCallback(() => {
+    if (workerRef.current) return;
+
+    const worker = new Worker(
+      new URL("../workers/inferenceWorker.ts", import.meta.url),
+      { type: "module" }
+    );
+
+    worker.onmessage = (e: MessageEvent) => {
+      const msg = e.data;
+      if (msg.type === "model-status") {
+        if (msg.status === "Model loaded") {
+          workerReadyRef.current = true;
+          setWarmUpTime(msg.warmUpTime);
+          setModelStatus("Model loaded");
+          setIsModelLoaded(true);
+          loadingRef.current = false;
+        } else if (msg.status === "webgpu-failed") {
+          console.warn("[useYoloModel] WebGPU failed in worker, falling back to WASM...");
+          loadingRef.current = false;
+          setDevice("wasm"); // triggers re-load via effect
+        } else if (msg.status === "Model loading failed") {
+          console.error("[useYoloModel] Worker model loading failed:", msg.error);
+          setModelStatus("Model loading failed");
+          loadingRef.current = false;
+        } else {
+          setModelStatus(msg.status);
+        }
+      }
+    };
+
+    worker.onerror = (error) => {
+      console.error("[useYoloModel] Worker error:", error);
+      loadingRef.current = false;
+    };
+
+    workerRef.current = worker;
+  }, []);
+
+  /** Load model in worker only */
+  const loadModel = useCallback(async () => {
+    if (loadingRef.current) {
+      console.log("[useYoloModel] Load already in progress, skipping.");
+      return;
+    }
+    loadingRef.current = true;
+
+    setModelStatus("Loading model...");
     setIsModelLoaded(false);
+    workerReadyRef.current = false;
 
-    const device = deviceRef.current.value;
-    const selectedModel = modelRef.current.value;
-    const customModel = customModels.find((model) => model.url === selectedModel);
+    const customModel = customModels.find((model) => model.url === modelName);
     const model_path = customModel
       ? customModel.url
-      : `/models/${selectedModel}.onnx`;
+      : `/models/${modelName}.onnx`;
 
-    try {
-      const start = performance.now();
-      const yolo_model = await model_loader(device, model_path, config);
-      const end = performance.now();
-      sessionRef.current = yolo_model;
+    if (workerRef.current) {
+      workerRef.current.postMessage({
+        type: "load-model",
+        device,
+        modelPath: model_path,
+        config,
+      });
+    } else {
+      console.error("[useYoloModel] Worker not initialized");
+      loadingRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [device, modelName, customModels]);
 
-      modelStatusEl.textContent = "Model loaded";
-      modelStatusEl.style.color = "green";
-      setWarmUpTime((end - start).toFixed(2));
-      setIsModelLoaded(true);
-    } catch (error) {
-      if (modelStatusEl) {
-        modelStatusEl.textContent = "Model loading failed";
-        modelStatusEl.style.color = "red";
+  /** Add a custom model with its classes. Called from AddModelDialog. */
+  const addCustomModel = useCallback((model: CustomModel) => {
+    setCustomModels((prev) => [...prev, model]);
+    setModelName(model.url);
+  }, []);
+
+  // Initialize worker on mount
+  useEffect(() => {
+    initWorker();
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.postMessage({ type: "release" });
+        workerRef.current.terminate();
+        workerRef.current = null;
       }
-      console.error(error);
-    }
-  };
+    };
+  }, [initWorker]);
 
-  const addModel = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const fileName = file.name.replace(".onnx", "");
-      setCustomModels((prevModels) => [
-        ...prevModels,
-        { name: fileName, url: URL.createObjectURL(file) },
-      ]);
-    }
-  };
-
+  // Load model when device/modelName/customModels change
   useEffect(() => {
     loadModel();
-  }, []);
+  }, [loadModel]);
 
   return {
     customModels,
     isModelLoaded,
     warmUpTime,
-    sessionRef,
-    modelStatusRef,
-    deviceRef,
-    modelRef,
+    workerRef,
+    workerReadyRef,
+    modelStatus,
+    device,
+    setDevice,
+    modelName,
+    setModelName,
     config,
     loadModel,
-    addModel,
+    addCustomModel,
+    activeClasses,
   };
 }
