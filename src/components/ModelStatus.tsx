@@ -1,63 +1,108 @@
 "use client";
 
 import { Box } from "../utils/types";
-import classes from "../utils/yolo_classes.json";
+import defaultClasses from "../utils/yolo_classes.json";
+import { Colors } from "../utils/img_preprocess";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Download } from "lucide-react";
 
 interface ModelStatusProps {
-  modelStatusRef: React.RefObject<HTMLParagraphElement | null>;
-  isModelLoaded: boolean;
-  warmUpTime: string;
-  inferenceTime: string;
   details: Box[];
+  selectedDetectionIdx: number | null;
+  onSelectDetection: (idx: number | null) => void;
+  onSave: () => void;
+  classes?: string[];
 }
 
 export default function ModelStatus({
-  modelStatusRef,
-  isModelLoaded,
-  warmUpTime,
-  inferenceTime,
   details,
+  selectedDetectionIdx,
+  onSelectDetection,
+  onSave,
+  classes = defaultClasses,
 }: ModelStatusProps) {
+  const handleRowClick = (idx: number) => {
+    onSelectDetection(selectedDetectionIdx === idx ? null : idx);
+  };
+
   return (
-    <div id="model-status-container" className="container w-full max-w-3xl text-center">
-      <div id="inference-time-container" className="flex flex-col sm:flex-row justify-evenly text-xl my-6">
-        <p>
-          Warm up time: <span className="text-lime-500">{warmUpTime}ms</span>
-        </p>
-        <p>
-          Inference time: <span className="text-lime-500">{inferenceTime}ms</span>
-        </p>
+    <Card className="w-full p-4 bg-white/80 backdrop-blur-sm shadow-md border-0 h-full flex flex-col">
+
+      {/* Header row: label + count + save */}
+      <div className="flex items-center justify-between mb-3 px-1">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          Detections{details.length > 0 && ` (${details.length})`}
+        </h2>
+        <button
+          onClick={onSave}
+          title="Save result as PNG"
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={details.length === 0}
+        >
+          <Download className="w-3 h-3" />
+          Save
+        </button>
       </div>
-      
-      <p ref={modelStatusRef} className={isModelLoaded ? "" : "animate-text-loading"}>
-        Model not loaded
-      </p>
-      
-      <details className="text-gray-200 group mt-4" open>
-        <summary className="my-5 hover:text-gray-400 cursor-pointer transition-colors duration-300">
-          Detected objects
-        </summary>
-        <div className="transition-all duration-300 ease-in-out transform origin-top group-open:animate-details-show">
-          <table className="w-full text-left border-collapse table-auto text-sm bg-gray-800 rounded-md overflow-hidden">
-            <thead className="bg-gray-700">
-              <tr>
-                <th className="border-b border-gray-600 p-4 text-gray-100">#</th>
-                <th className="border-b border-gray-600 p-4 text-gray-100">Class</th>
-                <th className="border-b border-gray-600 p-4 text-gray-100">Confidence</th>
-              </tr>
-            </thead>
-            <tbody>
-              {details.map((item, index) => (
-                <tr key={index} className="hover:bg-gray-700 transition-colors text-gray-300">
-                  <td className="border-b border-gray-600 p-4">{index + 1}</td>
-                  <td className="border-b border-gray-600 p-4">{classes[item.class_idx]}</td>
-                  <td className="border-b border-gray-600 p-4">{(item.score * 100).toFixed(1)}%</td>
+
+      <div className="flex-1 overflow-auto rounded-md border border-slate-100">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-slate-50 sticky top-0">
+            <tr>
+              <th className="p-3 font-semibold text-slate-600">#</th>
+              <th className="p-3 font-semibold text-slate-600">Class</th>
+              <th className="p-3 font-semibold text-slate-600">Conf.</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {details.map((item, index) => {
+              const isSelected = selectedDetectionIdx === index;
+              const isDimmed = selectedDetectionIdx !== null && !isSelected;
+              const color = Colors.getColor(item.class_idx, 1.0);
+              const dotColor = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+
+              return (
+                <tr
+                  key={index}
+                  onClick={() => handleRowClick(index)}
+                  className={`cursor-pointer transition-colors ${isSelected
+                      ? "bg-teal-50 ring-1 ring-inset ring-teal-300"
+                      : isDimmed
+                        ? "opacity-40 hover:opacity-70"
+                        : "hover:bg-slate-50"
+                    }`}
+                >
+                  <td className="p-3 text-slate-500">{index + 1}</td>
+                  <td className="p-3">
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: dotColor }}
+                      />
+                      <span className="font-medium text-slate-700">{classes[item.class_idx]}</span>
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <Badge
+                      variant={item.score > 0.8 ? "default" : "secondary"}
+                      className={item.score > 0.8 ? "bg-teal-500 hover:bg-teal-600" : ""}
+                    >
+                      {(item.score * 100).toFixed(1)}%
+                    </Badge>
+                  </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
-    </div>
+              );
+            })}
+            {details.length === 0 && (
+              <tr>
+                <td colSpan={3} className="p-8 text-center text-slate-400">
+                  No detections yet
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }
