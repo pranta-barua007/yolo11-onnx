@@ -1,33 +1,37 @@
 "use client";
 
-import { useEffect } from "react";
-import ModelSettings  from "../components/ModelSettings";
+import { useState } from "react";
 import MediaDisplay from "../components/MediaDisplay";
-import Controls from "../components/Controls";
 import ModelStatus from "../components/ModelStatus";
+import Header from "../components/Header";
 import { useYoloModel } from "../hooks/useYoloModel";
 import { useCamera } from "../hooks/useCamera";
 import { useImageProcessing } from "../hooks/useImageProcessing";
 import "../styles/styles.css";
+import { useEffect } from "react";
 
 export default function Home() {
   const {
     customModels,
     isModelLoaded,
     warmUpTime,
-    sessionRef,
-    modelStatusRef,
-    deviceRef,
-    modelRef,
+    workerRef,
+    workerReadyRef,
+    modelStatus,
+    device,
+    setDevice,
+    modelName,
+    setModelName,
     config,
-    loadModel,
-    addModel,
+    addCustomModel,
+    activeClasses,
   } = useYoloModel();
 
   const {
     cameras,
     cameraStream,
-    cameraSelectorRef,
+    selectedDeviceId,
+    setSelectedDeviceId,
     toggleCamera,
   } = useCamera();
 
@@ -43,20 +47,24 @@ export default function Home() {
     openImage,
     processImage,
     processCamera,
+    stopCameraProcessing,
+    redrawOverlay,
+    saveResult,
     toggleImage,
     clearOverlay,
+    setImgSrc,
   } = useImageProcessing();
 
+  const [selectedDetectionIdx, setSelectedDetectionIdx] = useState<number | null>(null);
+
   const handleImageLoad = () => {
-    if (sessionRef.current) {
-      processImage(sessionRef.current, config);
-    }
+    setSelectedDetectionIdx(null);
+    processImage(config, workerRef, workerReadyRef);
   };
 
   const handleCameraLoad = () => {
-    if (sessionRef.current) {
-      processCamera(sessionRef.current, config);
-    }
+    setSelectedDetectionIdx(null);
+    processCamera(config, workerRef, workerReadyRef);
   };
 
   const handleCameraToggle = () => {
@@ -66,65 +74,79 @@ export default function Home() {
     toggleCamera();
   };
 
-  // Cleanup camera stream when component unmounts
+  const handleSelectDetection = (idx: number | null) => {
+    setSelectedDetectionIdx(idx);
+    redrawOverlay(details, idx);
+  };
+
+  // Cleanup camera stream and processing when component unmounts
   useEffect(() => {
     return () => {
+      stopCameraProcessing();
       if (cameraStream) {
         cameraStream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [cameraStream]);
+  }, [cameraStream, stopCameraProcessing]);
 
   // Set camera stream to video element
   useEffect(() => {
     if (cameraRef.current) {
       cameraRef.current.srcObject = cameraStream;
     }
-  }, [cameraStream]);
+  }, [cameraStream, cameraRef]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 space-y-8">
-      <h1 className="text-4xl font-bold">Yolo Segmentation</h1>
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-teal-100 selection:text-teal-900">
+      {/* Header */}
+      <Header />
 
-      <ModelSettings
-        deviceRef={deviceRef}
-        modelRef={modelRef}
-        cameraSelectorRef={cameraSelectorRef}
-        customModels={customModels}
-        cameras={cameras}
-        onLoadModel={loadModel}
-      />
+      <main className="max-w-[1600px] mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-      <MediaDisplay
-        inputCanvasRef={inputCanvasRef}
-        cameraRef={cameraRef}
-        imgRef={imgRef}
-        overlayRef={overlayRef}
-        cameraStream={cameraStream}
-        imgSrc={imgSrc}
-        onCameraLoad={handleCameraLoad}
-        onImageLoad={handleImageLoad}
-      />
+        {/* Sidebar Status (Detections) */}
+        <aside className="lg:col-span-4 xl:col-span-3 space-y-6 flex flex-col order-2 lg:order-1 h-[calc(100vh-120px)] sticky top-24">
+          <ModelStatus
+            details={details}
+            selectedDetectionIdx={selectedDetectionIdx}
+            onSelectDetection={handleSelectDetection}
+            onSave={saveResult}
+            classes={activeClasses}
+          />
+        </aside>
 
-      <Controls
-        cameraStream={cameraStream}
-        isModelLoaded={isModelLoaded}
-        imgSrc={imgSrc}
-        cameras={cameras}
-        openImageRef={openImageRef}
-        onImageToggle={toggleImage}
-        onCameraToggle={handleCameraToggle}
-        onOpenImage={openImage}
-        onAddModel={addModel}
-      />
+        {/* Main Display Area */}
+        <section className="lg:col-span-8 xl:col-span-9 flex flex-col gap-6 order-1 lg:order-2">
+          <MediaDisplay
+            inputCanvasRef={inputCanvasRef}
+            cameraRef={cameraRef}
+            imgRef={imgRef}
+            overlayRef={overlayRef}
+            cameraStream={cameraStream}
+            imgSrc={imgSrc}
+            onCameraLoad={handleCameraLoad}
+            onImageLoad={handleImageLoad}
+            onImageSelect={setImgSrc}
+            onCameraToggle={handleCameraToggle}
+            onImageToggle={toggleImage}
+            openImageRef={openImageRef}
+            onOpenImage={openImage}
+            modelName={modelName}
+            setModelName={setModelName}
+            device={device}
+            setDevice={setDevice}
+            isModelLoaded={isModelLoaded}
+            modelStatus={modelStatus}
+            warmUpTime={warmUpTime}
+            inferenceTime={inferenceTime}
+            cameras={cameras}
+            selectedDeviceId={selectedDeviceId}
+            setSelectedDeviceId={setSelectedDeviceId}
+            customModels={customModels}
+            addCustomModel={addCustomModel}
+          />
+        </section>
 
-      <ModelStatus
-        modelStatusRef={modelStatusRef}
-        isModelLoaded={isModelLoaded}
-        warmUpTime={warmUpTime}
-        inferenceTime={inferenceTime}
-        details={details}
-      />
+      </main>
     </div>
   );
 }
