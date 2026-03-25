@@ -1,33 +1,42 @@
 {
-  "name": "yolo11-seg",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "@techstark/opencv-js": "^4.10.0-release.1",
-    "next": "15.3.4",
-    "onnxruntime-web": "^1.21.0",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "19.1.8",
-    "@types/react-dom": "19.1.6",
-    "eslint": "^9",
-    "eslint-config-next": "15.3.4",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  },
-  "overrides": {
-    "@types/react": "19.1.8",
-    "@types/react-dom": "19.1.6"
-  }
+    "name": "yolo11-seg",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev --webpack",
+        "build": "next build --webpack",
+        "start": "next start",
+        "lint": "eslint ."
+    },
+    "dependencies": {
+        "@radix-ui/react-dialog": "^1.1.15",
+        "@radix-ui/react-label": "^2.1.8",
+        "@radix-ui/react-select": "^2.2.6",
+        "@radix-ui/react-separator": "^1.1.8",
+        "@radix-ui/react-slot": "^1.2.4",
+        "@techstark/opencv-js": "4.12.0-release.1",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "lucide-react": "^0.575.0",
+        "next": "16.1.6",
+        "onnxruntime-web": "^1.24.2",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "tailwind-merge": "^3.5.0",
+        "tailwindcss-animate": "^1.0.7"
+    },
+    "devDependencies": {
+        "@tailwindcss/postcss": "^4.2.0",
+        "@types/node": "^20.19.33",
+        "@types/react": "19.2.14",
+        "@types/react-dom": "19.2.3",
+        "eslint": "^9.39.2",
+        "eslint-config-next": "16.1.6",
+        "tailwindcss": "^4.2.0",
+        "typescript": "^5.9.3"
+    },
+    "overrides": {
+        "@types/react": "19.2.14",
+        "@types/react-dom": "19.2.3"
+    }
 }
