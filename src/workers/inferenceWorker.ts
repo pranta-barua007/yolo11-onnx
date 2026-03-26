@@ -79,31 +79,44 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
       try {
         ort.env.logLevel = "error";
         const start = performance.now();
+        const isCustom = msg.modelPath.startsWith("custom:");
 
-        // ── Try loading from cache first ──
-        let modelBuffer = await getModelFromCache(msg.modelPath);
-
-        if (modelBuffer) {
+        if (isCustom) {
+          // ── Custom models: load from Cache API as ArrayBuffer ──
+          const modelBuffer = await getModelFromCache(msg.modelPath);
+          if (!modelBuffer) {
+            throw new Error(`Custom model "${msg.modelPath}" not found in cache. Please re-upload.`);
+          }
           ctx.postMessage({ type: "model-status", status: "Loading from cache..." });
+          session = await ort.InferenceSession.create(modelBuffer, {
+            executionProviders: [msg.device],
+            graphOptimizationLevel: "all",
+            logSeverityLevel: 3,
+          });
         } else {
-          ctx.postMessage({ type: "model-status", status: "Downloading model..." });
+          // ── Built-in models: use URL-based loading (ONNX RT optimized path) ──
+          // Pre-cache the response so subsequent loads are instant via browser HTTP cache.
+          const cached = await getModelFromCache(msg.modelPath);
+          if (cached) {
+            ctx.postMessage({ type: "model-status", status: "Loading from cache..." });
+          } else {
+            ctx.postMessage({ type: "model-status", status: "Downloading model..." });
+            // Fetch and pre-cache for next time
+            const response = await fetch(msg.modelPath);
+            if (!response.ok) throw new Error(`Failed to fetch model: ${response.status}`);
+            const buffer = await response.arrayBuffer();
+            putModelInCache(msg.modelPath, buffer); // non-blocking
+          }
 
-          // Fetch and cache the model bytes
-          const response = await fetch(msg.modelPath);
-          if (!response.ok) throw new Error(`Failed to fetch model: ${response.status}`);
-          modelBuffer = await response.arrayBuffer();
-
-          // Cache in the background (non-blocking — don't await)
-          putModelInCache(msg.modelPath, modelBuffer.slice(0));
+          // Let ONNX RT fetch the URL — it uses an optimized internal path
+          // and the browser HTTP cache will serve the response instantly.
+          ctx.postMessage({ type: "model-status", status: "Initializing model..." });
+          session = await ort.InferenceSession.create(msg.modelPath, {
+            executionProviders: [msg.device],
+            graphOptimizationLevel: "all",
+            logSeverityLevel: 3,
+          });
         }
-
-        // Create session from ArrayBuffer (no network fetch needed)
-        ctx.postMessage({ type: "model-status", status: "Initializing model..." });
-        session = await ort.InferenceSession.create(modelBuffer, {
-          executionProviders: [msg.device],
-          graphOptimizationLevel: "all",
-          logSeverityLevel: 3,
-        });
 
         // Warm-up inference
         const shape = msg.config.input_shape;
