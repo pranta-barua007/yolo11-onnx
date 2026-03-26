@@ -19,17 +19,17 @@ export default function Placeholder() {
 
   return (
     <div className="text-center p-8 max-w-2xl w-full flex flex-col items-center">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-lg mb-8">
         <Card
-          className="p-6 cursor-pointer hover:border-teal-500 hover:shadow-md transition-all flex flex-col items-center gap-3 group border-slate-200"
+          className="p-6 cursor-pointer glass-panel border-white/5 hover:bg-white/10 hover:border-primary/50 flex flex-col items-center gap-4 group transition-all duration-500 rounded-3xl"
           onClick={() => openImageRef.current?.click()}
         >
-          <div className="p-4 bg-teal-50 rounded-full group-hover:bg-teal-100 transition-colors">
-            <ImageIcon className="w-8 h-8 text-teal-600" />
+          <div className="p-4 bg-primary/10 rounded-[1.25rem] group-hover:bg-primary/20 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all duration-500">
+            <ImageIcon className="w-8 h-8 text-primary group-hover:text-white transition-colors" />
           </div>
           <div className="text-center">
-            <h3 className="font-semibold text-slate-900">Upload Image</h3>
-            <p className="text-sm text-slate-500">Analyze a local file</p>
+            <h3 className="font-semibold text-foreground text-lg mb-1">Upload Image</h3>
+            <p className="text-sm text-muted-foreground">Analyze a local file</p>
           </div>
           <input
             type="file"
@@ -41,23 +41,23 @@ export default function Placeholder() {
         </Card>
 
         <Card
-          className="p-6 cursor-pointer hover:border-teal-500 hover:shadow-md transition-all flex flex-col items-center gap-3 group border-slate-200"
+          className="p-6 cursor-pointer glass-panel border-white/5 hover:bg-white/10 hover:border-fuchsia-500/50 flex flex-col items-center gap-4 group transition-all duration-500 rounded-3xl"
           onClick={onCameraToggle}
         >
-          <div className="p-4 bg-purple-50 rounded-full group-hover:bg-purple-100 transition-colors">
-            <Camera className="w-8 h-8 text-purple-600" />
+          <div className="p-4 bg-fuchsia-500/10 rounded-[1.25rem] group-hover:bg-fuchsia-500/20 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(217,70,239,0.4)] transition-all duration-500">
+            <Camera className="w-8 h-8 text-fuchsia-500 group-hover:text-white transition-colors" />
           </div>
           <div className="text-center">
-            <h3 className="font-semibold text-slate-900">Open Camera</h3>
-            <p className="text-sm text-slate-500">Real-time detection</p>
+            <h3 className="font-semibold text-foreground text-lg mb-1">Open Camera</h3>
+            <p className="text-sm text-muted-foreground">Real-time detection</p>
           </div>
         </Card>
       </div>
 
       <div className="relative flex items-center w-full max-w-md mb-8">
-        <div className="grow border-t border-slate-200"></div>
-        <span className="shrink-0 mx-4 text-slate-400 text-sm">Or try an example</span>
-        <div className="grow border-t border-slate-200"></div>
+        <div className="grow border-t border-white/10"></div>
+        <span className="shrink-0 mx-4 text-muted-foreground text-xs font-semibold tracking-widest uppercase">Or try an example</span>
+        <div className="grow border-t border-white/10"></div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
@@ -65,11 +65,11 @@ export default function Placeholder() {
           <button
             key={i}
             onClick={() => onImageSelect(src)}
-            className="relative group/img overflow-hidden rounded-lg aspect-square border border-slate-200 hover:border-teal-500 hover:ring-2 hover:ring-teal-500/20 transition-all shadow-sm"
+            className="relative group/img overflow-hidden rounded-[1.25rem] aspect-square border border-white/10 hover:border-primary/50 hover:shadow-[0_0_25px_rgba(168,85,247,0.3)] transition-all duration-500"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt={`Example ${i + 1}`} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 transition-colors" />
+            <img src={src} alt={`Example ${i + 1}`} className="w-full h-full object-cover opacity-70 group-hover/img:opacity-100 transition-opacity duration-500 group-hover/img:scale-105" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity duration-500" />
           </button>
         ))}
       </div>

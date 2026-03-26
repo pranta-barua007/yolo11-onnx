@@ -27,22 +27,22 @@ function DeviceSelect() {
   const { state: { device, isModelLoaded }, actions: { setDevice } } = useMediaDisplay();
   return (
     <div className="flex items-center gap-2">
-      <Cpu className="w-3.5 h-3.5 text-slate-400" />
+      <Cpu className="w-3.5 h-3.5 text-muted-foreground" />
       <Select value={device} onValueChange={setDevice} defaultValue="webgpu">
-        <SelectTrigger className="h-8 w-full md:w-[120px] text-[11px] font-bold uppercase tracking-wider bg-slate-50 border-slate-200 rounded-full">
+        <SelectTrigger className="h-8 w-full md:w-[120px] text-[11px] font-bold uppercase tracking-wider bg-black/20 border-white/5 rounded-full text-foreground hover:bg-white/5 transition-colors">
           <div className="flex items-center gap-2">
             <div
               className={`w-2 h-2 rounded-full transition-all duration-500 ${isModelLoaded
-                ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.7)]"
-                : "bg-amber-400 animate-pulse"
+                ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]"
+                : "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)] animate-pulse"
                 }`}
             />
             <SelectValue placeholder="Select Device" />
           </div>
         </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="webgpu" className="text-xs uppercase">WebGPU</SelectItem>
-          <SelectItem value="wasm" className="text-xs uppercase">WASM</SelectItem>
+        <SelectContent className="bg-background/95 backdrop-blur-xl border-border/50">
+          <SelectItem value="webgpu" className="text-xs uppercase focus:bg-primary/20">WebGPU</SelectItem>
+          <SelectItem value="wasm" className="text-xs uppercase focus:bg-primary/20">WASM</SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -59,27 +59,27 @@ function ModelSelect() {
 
   return (
     <div className="flex items-center gap-2">
-      <Package className="w-3.5 h-3.5 text-slate-400" />
+      <Package className="w-3.5 h-3.5 text-muted-foreground" />
       <Select value={modelName} onValueChange={setModelName} defaultValue="yolo11n-seg">
-        <SelectTrigger className="h-8 w-full md:min-w-[140px] text-[11px] font-bold text-slate-700 bg-slate-50 border-slate-200 font-mono rounded-full">
+        <SelectTrigger className="h-8 w-full md:min-w-[140px] text-[11px] font-bold text-foreground bg-black/20 border-white/5 font-mono rounded-full hover:bg-white/5 transition-colors">
           <SelectValue placeholder="Select Model" />
         </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="yolo11n-seg" className="text-xs font-mono">High Speed</SelectItem>
-          <SelectItem value="yolo11s-seg" className="text-xs font-mono">High Accuracy</SelectItem>
+        <SelectContent className="bg-background/95 backdrop-blur-xl border-border/50">
+          <SelectItem value="yolo11n-seg" className="text-xs font-mono focus:bg-primary/20">High Speed</SelectItem>
+          <SelectItem value="yolo11s-seg" className="text-xs font-mono focus:bg-primary/20">High Accuracy</SelectItem>
           {customModels.filter(model => model.url).map((model) => (
-            <SelectItem key={model.url} value={model.url} className="text-xs font-mono">
+            <SelectItem key={model.url} value={model.url} className="text-xs font-mono focus:bg-primary/20">
               {model.name}
             </SelectItem>
           ))}
-          <div className="p-2 border-t border-slate-100 mt-1">
+          <div className="p-2 border-t border-white/10 mt-1">
             <button
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 setDialogOpen(true);
               }}
-              className="w-full text-[10px] font-bold uppercase tracking-wider py-1.5 px-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded transition-colors"
+              className="w-full text-[10px] font-bold uppercase tracking-wider py-1.5 px-2 bg-white/5 hover:bg-primary/20 text-muted-foreground hover:text-primary rounded transition-all duration-300"
             >
               + Add Custom Model
             </button>
@@ -104,14 +104,14 @@ function CameraSelect() {
 
   return (
     <div className="flex items-center gap-2">
-      <Video className="w-3.5 h-3.5 text-slate-400" />
+      <Video className="w-3.5 h-3.5 text-muted-foreground" />
       <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
-        <SelectTrigger className="h-8 w-full md:w-[160px] text-[11px] font-medium text-slate-700 bg-slate-50 border-slate-200 rounded-full">
+        <SelectTrigger className="h-8 w-full md:w-[160px] text-[11px] font-medium text-foreground bg-black/20 border-white/5 rounded-full hover:bg-white/5 transition-colors">
           <SelectValue placeholder="Select Camera" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-background/95 backdrop-blur-xl border-border/50">
           {cameras.filter(cam => cam.deviceId).map((cam) => (
-            <SelectItem key={cam.deviceId} value={cam.deviceId} className="text-xs">
+            <SelectItem key={cam.deviceId} value={cam.deviceId} className="text-xs focus:bg-primary/20">
               {cam.label || `Camera ${cam.deviceId.slice(0, 5)}`}
             </SelectItem>
           ))}
@@ -133,9 +133,9 @@ function ConfidenceSlider() {
   const isInferring = !!cameraStream || !!imgSrc;
 
   return (
-    <div className={`flex items-center gap-2 px-3 h-8 bg-slate-50 border border-slate-200 rounded-full transition-opacity ${isInferring ? "opacity-50 pointer-events-none" : ""}`}>
-      <Gauge className="w-3.5 h-3.5 text-slate-400" />
-      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Conf.</span>
+    <div className={`flex items-center gap-2 px-3 h-8 bg-black/20 border border-white/5 rounded-full transition-opacity ${isInferring ? "opacity-50 pointer-events-none" : ""}`}>
+      <Gauge className="w-3.5 h-3.5 text-muted-foreground" />
+      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Conf.</span>
       <input
         type="range"
         min={0.05}
@@ -144,9 +144,9 @@ function ConfidenceSlider() {
         value={scoreThreshold}
         onChange={(e) => setScoreThreshold(parseFloat(e.target.value))}
         disabled={isInferring}
-        className="w-20 h-1 accent-teal-500 cursor-pointer disabled:cursor-not-allowed"
+        className="w-20 h-1 accent-primary cursor-pointer disabled:cursor-not-allowed"
       />
-      <span className="text-[11px] font-bold text-teal-600 w-7 text-right tabular-nums">
+      <span className="text-[11px] font-bold text-primary w-7 text-right tabular-nums drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]">
         {(scoreThreshold * 100).toFixed(0)}%
       </span>
     </div>
@@ -162,42 +162,40 @@ function PerformanceMetrics() {
   return (
     <div className="flex items-center justify-between sm:justify-end gap-3 px-1 sm:px-0">
       {!isModelLoaded ? (
-        <div className="flex items-center gap-2 text-amber-600">
-          <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          <span className="text-[11px] font-medium">{modelStatus}</span>
+        <div className="flex items-center gap-2 text-primary">
+          <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
+          <span className="text-[11px] font-medium animate-pulse">{modelStatus}</span>
         </div>
       ) : (
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          {fps > 0 && (
-            <>
-              <div className="flex items-center gap-1 text-[11px]">
-                <span className="font-medium text-slate-400">FPS</span>
-                <span className="font-bold text-indigo-600">{fps}</span>
-              </div>
-              <div className="w-px h-3 bg-slate-200" />
-            </>
-          )}
           <div className="flex items-center gap-1 text-[11px]">
-            <span className="font-medium text-slate-400">Inf.</span>
-            <span className="font-bold text-teal-600">{inferenceTime}ms</span>
+            <span className="font-medium text-muted-foreground">FPS</span>
+            <span className="font-bold text-fuchsia-400 drop-shadow-[0_0_5px_rgba(232,121,249,0.5)]">
+              {fps > 0 ? fps : "--"}
+            </span>
           </div>
-          <div className="w-px h-3 bg-slate-200" />
+          <div className="w-px h-3 bg-white/10" />
           <div className="flex items-center gap-1 text-[11px]">
-            <span className="font-medium text-slate-400 hidden sm:inline">Warmup</span>
-            <span className="font-medium text-slate-400 sm:hidden" title="Warmup">W.</span>
-            <span className="font-bold text-teal-600">{warmUpTime}ms</span>
+            <span className="font-medium text-muted-foreground">Inf.</span>
+            <span className="font-bold text-primary drop-shadow-[0_0_5px_rgba(168,85,247,0.5)]">{inferenceTime}ms</span>
+          </div>
+          <div className="w-px h-3 bg-white/10" />
+          <div className="flex items-center gap-1 text-[11px]">
+            <span className="font-medium text-muted-foreground hidden sm:inline">Warmup</span>
+            <span className="font-medium text-muted-foreground sm:hidden" title="Warmup">W.</span>
+            <span className="font-bold text-primary/70">{warmUpTime}ms</span>
           </div>
           
           <div className="ml-auto flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+            <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
               <span className="hidden sm:inline">Ready</span>
             </span>
             <button
               onClick={reloadModel}
               disabled={!!cameraStream}
               title="Re-download model (clear cache)"
-              className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="p-1 rounded-md hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
@@ -209,13 +207,13 @@ function PerformanceMetrics() {
 }
 
 const StatusBarSkeleton = (
-  <div className="w-full flex items-center justify-between animate-pulse">
+  <div className="w-full flex items-center justify-between animate-pulse px-4 py-3">
     <div className="flex gap-4">
-      <div className="h-8 w-24 bg-slate-100 rounded-full" />
-      <div className="h-8 w-32 bg-slate-100 rounded-md hidden md:block" />
-      <div className="h-8 w-40 bg-slate-100 rounded-md hidden md:block" />
+      <div className="h-8 w-24 bg-white/5 rounded-full" />
+      <div className="h-8 w-32 bg-white/5 rounded-full hidden md:block" />
+      <div className="h-8 w-40 bg-white/5 rounded-full hidden md:block" />
     </div>
-    <div className="h-8 w-32 bg-slate-100 rounded-md" />
+    <div className="h-8 w-32 bg-white/5 rounded-full" />
   </div>
 );
 
@@ -224,7 +222,7 @@ export default function StatusBar() {
   const [showSettings, setShowSettings] = useState(false);
 
   return (
-    <div className="flex-none bg-white border-b border-slate-100 px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 min-h-[64px]">
+    <div className="flex-none glass-panel border-t-0 border-x-0 sm:border-t sm:border-x border-white/5 px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 min-h-[64px] rounded-t-[20px]">
       {mounted ? (
         <>
           <div className={`flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-4 transition-all duration-300 ${!showSettings ? 'hidden md:flex' : 'flex'}`}>
@@ -238,11 +236,11 @@ export default function StatusBar() {
           <div className="md:hidden flex items-center justify-between gap-4 mt-1">
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200 text-slate-600 font-medium text-[10px] uppercase tracking-wider transition-colors hover:bg-slate-100"
+              className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 text-muted-foreground font-medium text-[10px] uppercase tracking-wider transition-all hover:bg-white/10 hover:text-foreground"
             >
-              <Sliders className="w-3 h-3 text-slate-400" />
+              <Sliders className="w-3 h-3 text-muted-foreground" />
               {showSettings ? "Hide Options" : "Show Options"}
-              {showSettings ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
+              {showSettings ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />}
             </button>
           </div>
 

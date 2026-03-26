@@ -106,7 +106,7 @@ export default function Home() {
   }, [cameraStream, cameraRef]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-teal-100 selection:text-teal-900">
+    <div className="min-h-screen text-foreground font-sans selection:bg-primary/30 selection:text-primary">
       {/* Header */}
       <Header />
 
