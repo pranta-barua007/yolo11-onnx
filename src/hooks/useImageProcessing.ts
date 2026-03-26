@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, MutableRefObject } from "react";
+import { useState, useRef, useCallback, MutableRefObject, RefObject } from "react";
 import { draw_bounding_boxes } from "../utils/draw_bounding_boxes";
 import { Box } from "../utils/types";
 
@@ -195,8 +195,8 @@ export function useImageProcessing() {
    */
   const processCamera = (
     config: Config,
-    workerRef: MutableRefObject<Worker | null>,
-    workerReadyRef: MutableRefObject<boolean>,
+    workerRef: RefObject<Worker | null>,
+    workerReadyRef: RefObject<boolean>,
     onFrameTick?: () => void
   ) => {
     if (!cameraRef.current || !inputCanvasRef.current || !overlayRef.current) return;
