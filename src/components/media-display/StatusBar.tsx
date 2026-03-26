@@ -224,7 +224,7 @@ export default function StatusBar() {
   const [showSettings, setShowSettings] = useState(false);
 
   return (
-    <div className="flex-none bg-white border-b border-slate-100 px-4 py-3 lg:py-0 min-h-[64px] lg:h-[64px] flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+    <div className="flex-none bg-white border-b border-slate-100 px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 min-h-[64px]">
       {mounted ? (
         <>
           <div className={`flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-4 transition-all duration-300 ${!showSettings ? 'hidden md:flex' : 'flex'}`}>
