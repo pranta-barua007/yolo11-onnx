@@ -145,16 +145,13 @@ export function useYoloModel() {
     setModelStatus("Loading model...");
     workerReadyRef.current = false;
 
-    // Send invalidate-cache then load-model (worker processes sequentially)
-    workerRef.current?.postMessage({
-      type: "invalidate-cache",
-      modelPath: model_path,
-    });
+    // Send a single load-model message with forceReload to prevent async race conditions
     workerRef.current?.postMessage({
       type: "load-model",
       device,
       modelPath: model_path,
       config,
+      forceReload: true,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modelName, device, resolveModelPath]);

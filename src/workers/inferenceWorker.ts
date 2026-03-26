@@ -19,6 +19,7 @@ export interface LoadModelMessage {
     score_threshold: number;
     classes?: string[];
   };
+  forceReload?: boolean;
 }
 
 export interface RunInferenceMessage {
@@ -69,8 +70,17 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
     case "load-model": {
       const key = `${msg.device}|${msg.modelPath}`;
 
-      // Reuse if same model
-      if (session && sessionKey === key) {
+      if (msg.forceReload) {
+        // Clear cache and release session entirely before proceeding
+        await deleteModelFromCache(msg.modelPath);
+        if (session) {
+          try { await session.release(); } catch { /* ignore */ }
+          session = null;
+          sessionKey = null;
+          revokeActiveBlobUrl();
+        }
+      } else if (session && sessionKey === key) {
+        // Reuse if same model and not a forced reload
         ctx.postMessage({
           type: "model-status",
           status: "Model loaded",
@@ -79,7 +89,7 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
         return;
       }
 
-      // Release previous session
+      // If we are switching models without forcing reload, we still need to release the old one
       if (session) {
         try { await session.release(); } catch { /* ignore */ }
         session = null;
