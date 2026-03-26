@@ -30,7 +30,8 @@ interface MediaDisplayActions {
   onCameraToggle: () => void;
   onImageToggle: () => void;
   onOpenImage: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  addCustomModel: (model: CustomModel) => void;
+  addCustomModel: (model: CustomModel & { buffer?: ArrayBuffer }) => void;
+  reloadModel: () => void;
 }
 
 interface MediaDisplayMeta {

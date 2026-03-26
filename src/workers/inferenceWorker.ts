@@ -1,13 +1,6 @@
-/**
- * Web Worker for YOLO11-Seg inference.
- *
- * Handles model loading and inference entirely off the main thread.
- * Communicates via structured messages:
- *   Main → Worker: "load-model" | "run-inference" | "release"
- *   Worker → Main: "model-status" | "inference-result"
- */
 import * as ort from "onnxruntime-web";
 import { workerInferencePipeline } from "./workerPipeline";
+import { getModelFromCache, putModelInCache, deleteModelFromCache } from "../utils/model_cache";
 
 // ── Worker-global state ──
 let session: ort.InferenceSession | null = null;
@@ -45,7 +38,16 @@ export interface ReleaseMessage {
   type: "release";
 }
 
-export type WorkerInMessage = LoadModelMessage | RunInferenceMessage | ReleaseMessage;
+export interface InvalidateCacheMessage {
+  type: "invalidate-cache";
+  modelPath: string;
+}
+
+export type WorkerInMessage =
+  | LoadModelMessage
+  | RunInferenceMessage
+  | ReleaseMessage
+  | InvalidateCacheMessage;
 
 const ctx: Worker = self as unknown as Worker;
 
@@ -53,7 +55,7 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
   const msg = e.data;
 
   switch (msg.type) {
-    // ── Load or switch model ──
+    // ── Load or switch model (with caching) ──
     case "load-model": {
       const key = `${msg.device}|${msg.modelPath}`;
 
@@ -74,13 +76,30 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
         sessionKey = null;
       }
 
-      ctx.postMessage({ type: "model-status", status: "Loading model..." });
-
       try {
         ort.env.logLevel = "error";
-
         const start = performance.now();
-        session = await ort.InferenceSession.create(msg.modelPath, {
+
+        // ── Try loading from cache first ──
+        let modelBuffer = await getModelFromCache(msg.modelPath);
+
+        if (modelBuffer) {
+          ctx.postMessage({ type: "model-status", status: "Loading from cache..." });
+        } else {
+          ctx.postMessage({ type: "model-status", status: "Downloading model..." });
+
+          // Fetch and cache the model bytes
+          const response = await fetch(msg.modelPath);
+          if (!response.ok) throw new Error(`Failed to fetch model: ${response.status}`);
+          modelBuffer = await response.arrayBuffer();
+
+          // Cache in the background (non-blocking — don't await)
+          putModelInCache(msg.modelPath, modelBuffer.slice(0));
+        }
+
+        // Create session from ArrayBuffer (no network fetch needed)
+        ctx.postMessage({ type: "model-status", status: "Initializing model..." });
+        session = await ort.InferenceSession.create(modelBuffer, {
           executionProviders: [msg.device],
           graphOptimizationLevel: "all",
           logSeverityLevel: 3,
@@ -121,6 +140,18 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
             error: errMsg,
           });
         }
+      }
+      break;
+    }
+
+    // ── Invalidate cached model ──
+    case "invalidate-cache": {
+      await deleteModelFromCache(msg.modelPath);
+      // Also release session so next load-model re-downloads
+      if (session) {
+        try { await session.release(); } catch { /* ignore */ }
+        session = null;
+        sessionKey = null;
       }
       break;
     }

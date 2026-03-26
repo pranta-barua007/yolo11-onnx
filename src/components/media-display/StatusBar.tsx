@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { useState } from "react";
-import { Cpu, Package, Video, ChevronDown, ChevronUp, Sliders, Gauge } from "lucide-react";
+import { Cpu, Package, Video, ChevronDown, ChevronUp, Sliders, Gauge, RefreshCw } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -155,7 +155,8 @@ function ConfidenceSlider() {
 
 function PerformanceMetrics() {
   const {
-    state: { isModelLoaded, modelStatus, inferenceTime, warmUpTime, fps },
+    state: { isModelLoaded, modelStatus, inferenceTime, warmUpTime, fps, cameraStream },
+    actions: { reloadModel },
   } = useMediaDisplay();
 
   return (
@@ -190,6 +191,14 @@ function PerformanceMetrics() {
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
             Ready
           </span>
+          <button
+            onClick={reloadModel}
+            disabled={!!cameraStream}
+            title="Re-download model (clear cache)"
+            className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
     </div>

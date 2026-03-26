@@ -28,6 +28,7 @@ export default function Home() {
     activeClasses,
     scoreThreshold,
     setScoreThreshold,
+    reloadModel,
   } = useYoloModel();
 
   const {
@@ -154,6 +155,7 @@ export default function Home() {
             setSelectedDeviceId={setSelectedDeviceId}
             customModels={customModels}
             addCustomModel={addCustomModel}
+            reloadModel={reloadModel}
           />
         </section>
 

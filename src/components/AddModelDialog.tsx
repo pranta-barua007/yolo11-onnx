@@ -19,7 +19,7 @@ import { CustomModel } from "@/utils/types";
 interface AddModelDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddModel: (model: CustomModel) => void;
+  onAddModel: (model: CustomModel & { buffer?: ArrayBuffer }) => void;
 }
 
 export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddModelDialogProps) {
@@ -120,15 +120,19 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
     setClasses((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!modelFile || classes.length === 0) return;
 
-    const model: CustomModel = {
+    // Read file as ArrayBuffer for caching (non-blocking via FileReader)
+    const buffer = await modelFile.arrayBuffer();
+    const cacheKey = `custom:${modelFile.name.replace(".onnx", "")}`;
+
+    onAddModel({
       name: modelFile.name.replace(".onnx", ""),
-      url: URL.createObjectURL(modelFile),
+      url: cacheKey,
       classes,
-    };
-    onAddModel(model);
+      buffer,
+    });
     resetState();
     onOpenChange(false);
   };

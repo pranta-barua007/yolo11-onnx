@@ -3,6 +3,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { CustomModel } from "../utils/types";
 import { isWebGPUSupported } from "../utils/gpu_check";
+import {
+  putModelInCache,
+  getCustomModelsMetadata,
+  addCustomModelMetadata,
+} from "../utils/model_cache";
 import defaultClasses from "../utils/yolo_classes.json";
 
 const input_shape = [1, 3, 640, 640];
@@ -15,9 +20,22 @@ const DEFAULT_SCORE_THRESHOLD = 0.55;
  * The model is loaded ONLY in the worker (not on main thread),
  * keeping GPU/WASM memory usage to a single copy.
  * Both image mode and camera mode route through the same worker.
+ *
+ * Custom models are persisted:
+ *   - Model bytes → Cache API (via model_cache.ts)
+ *   - Metadata (name, classes) → localStorage
  */
 export function useYoloModel() {
-  const [customModels, setCustomModels] = useState<CustomModel[]>([]);
+  // Hydrate custom models from localStorage on mount
+  const [customModels, setCustomModels] = useState<CustomModel[]>(() => {
+    const persisted = getCustomModelsMetadata();
+    return persisted.map((m) => ({
+      name: m.name,
+      url: m.cacheKey,
+      classes: m.classes,
+    }));
+  });
+
   const [isModelLoaded, setIsModelLoaded] = useState<boolean>(false);
   const [warmUpTime, setWarmUpTime] = useState<string>("0");
   const [device, setDevice] = useState<string>(isWebGPUSupported() ? "webgpu" : "wasm");
@@ -80,6 +98,12 @@ export function useYoloModel() {
     workerRef.current = worker;
   }, []);
 
+  /** Resolve model path — built-in uses /models/ URL, custom uses cache key directly. */
+  const resolveModelPath = useCallback((name: string): string => {
+    const customModel = customModels.find((m) => m.url === name);
+    return customModel ? customModel.url : `/models/${name}.onnx`;
+  }, [customModels]);
+
   /** Load model in worker only */
   const loadModel = useCallback(async () => {
     if (loadingRef.current) {
@@ -92,10 +116,7 @@ export function useYoloModel() {
     setIsModelLoaded(false);
     workerReadyRef.current = false;
 
-    const customModel = customModels.find((model) => model.url === modelName);
-    const model_path = customModel
-      ? customModel.url
-      : `/models/${modelName}.onnx`;
+    const model_path = resolveModelPath(modelName);
 
     if (workerRef.current) {
       workerRef.current.postMessage({
@@ -109,12 +130,54 @@ export function useYoloModel() {
       loadingRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [device, modelName, customModels]);
+  }, [device, modelName, customModels, resolveModelPath]);
 
-  /** Add a custom model with its classes. Called from AddModelDialog. */
-  const addCustomModel = useCallback((model: CustomModel) => {
-    setCustomModels((prev) => [...prev, model]);
-    setModelName(model.url);
+  /**
+   * Invalidate cached model and re-download.
+   * Non-blocking — sends message to worker, then triggers loadModel.
+   */
+  const reloadModel = useCallback(() => {
+    const model_path = resolveModelPath(modelName);
+    workerRef.current?.postMessage({
+      type: "invalidate-cache",
+      modelPath: model_path,
+    });
+    // Force re-download by clearing loading state
+    loadingRef.current = false;
+    loadModel();
+  }, [modelName, resolveModelPath, loadModel]);
+
+  /**
+   * Add a custom model — persists bytes to Cache API and metadata to localStorage.
+   * Called from AddModelDialog with the file's ArrayBuffer.
+   */
+  const addCustomModel = useCallback(async (model: CustomModel & { buffer?: ArrayBuffer }) => {
+    const cacheKey = `custom:${model.name}`;
+
+    // Persist bytes to Cache API if buffer provided
+    if (model.buffer) {
+      await putModelInCache(cacheKey, model.buffer);
+    }
+
+    // Persist metadata to localStorage
+    addCustomModelMetadata({
+      name: model.name,
+      classes: model.classes,
+      cacheKey,
+    });
+
+    // Register in React state
+    const registeredModel: CustomModel = {
+      name: model.name,
+      url: cacheKey,
+      classes: model.classes,
+    };
+
+    setCustomModels((prev) => {
+      const filtered = prev.filter((m) => m.url !== cacheKey);
+      return [...filtered, registeredModel];
+    });
+    setModelName(cacheKey);
   }, []);
 
   // Initialize worker on mount
@@ -147,6 +210,7 @@ export function useYoloModel() {
     setModelName,
     config,
     loadModel,
+    reloadModel,
     addCustomModel,
     activeClasses,
     scoreThreshold,
