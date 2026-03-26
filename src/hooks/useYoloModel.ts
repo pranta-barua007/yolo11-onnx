@@ -134,18 +134,30 @@ export function useYoloModel() {
 
   /**
    * Invalidate cached model and re-download.
-   * Non-blocking — sends message to worker, then triggers loadModel.
+   * Directly manages state and worker messages (bypasses loadModel guard).
    */
   const reloadModel = useCallback(() => {
     const model_path = resolveModelPath(modelName);
+
+    // Reset UI state
+    loadingRef.current = true;
+    setIsModelLoaded(false);
+    setModelStatus("Loading model...");
+    workerReadyRef.current = false;
+
+    // Send invalidate-cache then load-model (worker processes sequentially)
     workerRef.current?.postMessage({
       type: "invalidate-cache",
       modelPath: model_path,
     });
-    // Force re-download by clearing loading state
-    loadingRef.current = false;
-    loadModel();
-  }, [modelName, resolveModelPath, loadModel]);
+    workerRef.current?.postMessage({
+      type: "load-model",
+      device,
+      modelPath: model_path,
+      config,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modelName, device, resolveModelPath]);
 
   /**
    * Add a custom model — persists bytes to Cache API and metadata to localStorage.
