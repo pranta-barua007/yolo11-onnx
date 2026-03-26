@@ -124,7 +124,7 @@ export default function Home() {
         </aside>
 
         {/* Main Display Area */}
-        <section className="lg:col-span-8 xl:col-span-9 flex flex-col gap-6 order-1 lg:order-2">
+        <section className="lg:col-span-8 xl:col-span-9 flex flex-col gap-6 order-1 lg:order-2 lg:h-[calc(100vh-120px)] lg:sticky top-24">
           <MediaDisplay
             inputCanvasRef={inputCanvasRef}
             cameraRef={cameraRef}
