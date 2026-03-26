@@ -1,3 +1,8 @@
+/**
+ * @deprecated This main-thread model loader is no longer used.
+ * Model loading is now handled exclusively by the Web Worker (inferenceWorker.ts).
+ * Kept for reference only — safe to delete.
+ */
 import * as ort from "onnxruntime-web";
 
 interface Config {

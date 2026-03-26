@@ -1,3 +1,8 @@
+/**
+ * @deprecated This main-thread inference pipeline is no longer used.
+ * Inference is now handled by the Web Worker (workerPipeline.ts).
+ * Kept for reference only — safe to delete.
+ */
 import * as ort from 'onnxruntime-web';
 import cv from '@techstark/opencv-js';
 import { preProcess, applyNMS, extractDetections } from "./img_preprocess";

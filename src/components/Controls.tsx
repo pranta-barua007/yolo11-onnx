@@ -1,3 +1,8 @@
+/**
+ * @deprecated This button bar is no longer used in the current UI.
+ * Replaced by Placeholder.tsx (upload/camera/examples) and StatusBar.tsx (model selector).
+ * Kept for reference only — safe to delete.
+ */
 "use client";
 
 import { Button } from "@/components/ui/button";
