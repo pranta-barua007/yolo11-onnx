@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { useState } from "react";
-import { Cpu, Package, Video, ChevronDown, ChevronUp, Sliders } from "lucide-react";
+import { Cpu, Package, Video, ChevronDown, ChevronUp, Sliders, Gauge } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -124,10 +124,38 @@ function CameraSelect() {
   );
 }
 
+function ConfidenceSlider() {
+  const {
+    state: { scoreThreshold, cameraStream, imgSrc },
+    actions: { setScoreThreshold },
+  } = useMediaDisplay();
+
+  const isInferring = !!cameraStream || !!imgSrc;
+
+  return (
+    <div className={`flex items-center gap-2 px-3 h-8 bg-slate-50 border border-slate-200 rounded-full transition-opacity ${isInferring ? "opacity-50 pointer-events-none" : ""}`}>
+      <Gauge className="w-3.5 h-3.5 text-slate-400" />
+      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Conf.</span>
+      <input
+        type="range"
+        min={0.05}
+        max={0.95}
+        step={0.05}
+        value={scoreThreshold}
+        onChange={(e) => setScoreThreshold(parseFloat(e.target.value))}
+        disabled={isInferring}
+        className="w-20 h-1 accent-teal-500 cursor-pointer disabled:cursor-not-allowed"
+      />
+      <span className="text-[11px] font-bold text-teal-600 w-7 text-right tabular-nums">
+        {(scoreThreshold * 100).toFixed(0)}%
+      </span>
+    </div>
+  );
+}
+
 function PerformanceMetrics() {
   const {
-    state: { isModelLoaded, modelStatus, inferenceTime, warmUpTime, fps, scoreThreshold },
-    actions: { setScoreThreshold },
+    state: { isModelLoaded, modelStatus, inferenceTime, warmUpTime, fps },
   } = useMediaDisplay();
 
   return (
@@ -148,22 +176,6 @@ function PerformanceMetrics() {
               <div className="w-px h-3 bg-slate-200" />
             </>
           )}
-          <div className="flex items-center gap-1.5 text-[11px]">
-            <span className="font-medium text-slate-400">Conf.</span>
-            <input
-              type="range"
-              min={0.05}
-              max={0.95}
-              step={0.05}
-              value={scoreThreshold}
-              onChange={(e) => setScoreThreshold(parseFloat(e.target.value))}
-              className="w-16 h-1 accent-teal-500 cursor-pointer"
-            />
-            <span className="font-bold text-teal-600 w-8 text-right tabular-nums">
-              {(scoreThreshold * 100).toFixed(0)}%
-            </span>
-          </div>
-          <div className="w-px h-3 bg-slate-200" />
           <div className="flex items-center gap-1 text-[11px]">
             <span className="font-medium text-slate-400">Inf.</span>
             <span className="font-bold text-teal-600">{inferenceTime}ms</span>
@@ -207,6 +219,7 @@ export default function StatusBar() {
             <DeviceSelect />
             <ModelSelect />
             <CameraSelect />
+            <ConfidenceSlider />
           </div>
 
           {/* Mobile Settings Toggle */}
