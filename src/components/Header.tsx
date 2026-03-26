@@ -17,9 +17,9 @@ export default function Header({ rightSlot }: HeaderProps) {
                 {/* Brand */}
                 <Link href="/" className="flex items-center gap-2 group">
                     <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center text-white font-bold text-xl group-hover:bg-teal-700 transition-colors">D</div>
-                    <span className="text-lg md:text-xl font-bold text-slate-800 tracking-tight flex items-baseline">
+                    <span className="hidden sm:flex text-lg md:text-xl font-bold text-slate-800 tracking-tight items-baseline">
                         YOLO Real-time
-                        <span className="text-slate-400 font-normal text-xs md:sm ml-2 hidden sm:inline">Segmentation App</span>
+                        <span className="text-slate-400 font-normal text-xs md:sm ml-2 hidden lg:inline">Segmentation App</span>
                     </span>
                 </Link>
 
