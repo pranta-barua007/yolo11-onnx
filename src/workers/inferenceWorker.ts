@@ -1,10 +1,12 @@
 import * as ort from "onnxruntime-web";
 import { workerInferencePipeline } from "./workerPipeline";
-import { getModelFromCache, deleteModelFromCache } from "../utils/model_cache";
+import { getModelFromCache, putModelInCache, deleteModelFromCache } from "../utils/model_cache";
 
 // ── Worker-global state ──
 let session: ort.InferenceSession | null = null;
 let sessionKey: string | null = null;
+/** Track blob URLs to revoke on session release (prevents memory leaks). */
+let activeBlobUrl: string | null = null;
 
 // ── Message types ──
 export interface LoadModelMessage {
@@ -51,6 +53,14 @@ export type WorkerInMessage =
 
 const ctx: Worker = self as unknown as Worker;
 
+/** Revoke any active blob URL to free memory. */
+function revokeActiveBlobUrl() {
+  if (activeBlobUrl) {
+    URL.revokeObjectURL(activeBlobUrl);
+    activeBlobUrl = null;
+  }
+}
+
 ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
   const msg = e.data;
 
@@ -74,36 +84,38 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
         try { await session.release(); } catch { /* ignore */ }
         session = null;
         sessionKey = null;
+        revokeActiveBlobUrl();
       }
 
       try {
         ort.env.logLevel = "error";
         const start = performance.now();
-        const isCustom = msg.modelPath.startsWith("custom:");
 
-        if (isCustom) {
-          // ── Custom models: load from Cache API as ArrayBuffer ──
-          const modelBuffer = await getModelFromCache(msg.modelPath);
-          if (!modelBuffer) {
-            throw new Error(`Custom model "${msg.modelPath}" not found in cache. Please re-upload.`);
-          }
+        // ── Resolve model bytes (from cache or network) ──
+        let modelBuffer = await getModelFromCache(msg.modelPath);
+
+        if (modelBuffer) {
           ctx.postMessage({ type: "model-status", status: "Loading from cache..." });
-          session = await ort.InferenceSession.create(modelBuffer, {
-            executionProviders: [msg.device],
-            graphOptimizationLevel: "all",
-            logSeverityLevel: 3,
-          });
         } else {
-          // ── Built-in models: pass URL directly to ONNX RT ──
-          // ONNX RT has an optimized internal fetch path for URLs.
-          // The browser HTTP cache handles repeat loads automatically.
-          ctx.postMessage({ type: "model-status", status: "Loading model..." });
-          session = await ort.InferenceSession.create(msg.modelPath, {
-            executionProviders: [msg.device],
-            graphOptimizationLevel: "all",
-            logSeverityLevel: 3,
-          });
+          ctx.postMessage({ type: "model-status", status: "Downloading model..." });
+          const response = await fetch(msg.modelPath);
+          if (!response.ok) throw new Error(`Failed to fetch model: ${response.status}`);
+          modelBuffer = await response.arrayBuffer();
+          // Cache for next time (non-blocking)
+          putModelInCache(msg.modelPath, modelBuffer.slice(0));
         }
+
+        // ── Create session via blob URL (preserves ONNX RT's optimized URL path) ──
+        ctx.postMessage({ type: "model-status", status: "Initializing model..." });
+        const blob = new Blob([modelBuffer], { type: "application/octet-stream" });
+        const blobUrl = URL.createObjectURL(blob);
+        activeBlobUrl = blobUrl;
+
+        session = await ort.InferenceSession.create(blobUrl, {
+          executionProviders: [msg.device],
+          graphOptimizationLevel: "all",
+          logSeverityLevel: 3,
+        });
 
         // Warm-up inference
         const shape = msg.config.input_shape;
@@ -152,6 +164,7 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
         try { await session.release(); } catch { /* ignore */ }
         session = null;
         sessionKey = null;
+        revokeActiveBlobUrl();
       }
       break;
     }
@@ -208,6 +221,7 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
         try { await session.release(); } catch { /* ignore */ }
         session = null;
         sessionKey = null;
+        revokeActiveBlobUrl();
       }
       break;
     }
