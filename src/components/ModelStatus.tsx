@@ -29,8 +29,8 @@ export default function ModelStatus({
   return (
     <Card className="w-full p-4 bg-white/80 backdrop-blur-sm shadow-md border-0 h-full flex flex-col">
 
-      {/* Header row: label + count + save - strictly 36px to align perfectly with the 64px StatusBar */}
-      <div className="flex items-center justify-between mb-3 px-1 h-[36px]">
+      {/* Header row: label + count + save */}
+      <div className="flex items-center justify-between mb-3 px-1">
         <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
           Detections{details.length > 0 && ` (${details.length})`}
         </h2>

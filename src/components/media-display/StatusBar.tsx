@@ -170,26 +170,26 @@ function PerformanceMetrics() {
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           {fps > 0 && (
             <>
-              <div className="flex items-center gap-1 text-[11px] whitespace-nowrap">
+              <div className="flex items-center gap-1 text-[11px]">
                 <span className="font-medium text-slate-400">FPS</span>
                 <span className="font-bold text-indigo-600">{fps}</span>
               </div>
               <div className="w-px h-3 bg-slate-200" />
             </>
           )}
-          <div className="flex items-center gap-1 text-[11px] whitespace-nowrap">
+          <div className="flex items-center gap-1 text-[11px]">
             <span className="font-medium text-slate-400">Inf.</span>
             <span className="font-bold text-teal-600">{inferenceTime}ms</span>
           </div>
           <div className="w-px h-3 bg-slate-200" />
-          <div className="flex items-center gap-1 text-[11px] whitespace-nowrap">
+          <div className="flex items-center gap-1 text-[11px]">
             <span className="font-medium text-slate-400 hidden sm:inline">Warmup</span>
             <span className="font-medium text-slate-400 sm:hidden" title="Warmup">W.</span>
             <span className="font-bold text-teal-600">{warmUpTime}ms</span>
           </div>
           
           <div className="ml-auto flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 whitespace-nowrap">
+            <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
               <span className="hidden sm:inline">Ready</span>
             </span>
@@ -224,7 +224,7 @@ export default function StatusBar() {
   const [showSettings, setShowSettings] = useState(false);
 
   return (
-    <div className="flex-none bg-white border-b border-slate-100 px-4 py-3 lg:py-0 min-h-[64px] lg:h-[64px] flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 overflow-x-auto overflow-y-hidden scrollbar-hide">
+    <div className="flex-none bg-white border-b border-slate-100 px-4 py-3 lg:py-0 min-h-[64px] lg:h-[64px] flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
       {mounted ? (
         <>
           <div className={`flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-4 transition-all duration-300 ${!showSettings ? 'hidden md:flex' : 'flex'}`}>
