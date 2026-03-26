@@ -10,6 +10,7 @@ interface MediaDisplayState {
   modelStatus: string;
   warmUpTime: string;
   inferenceTime: string;
+  fps: number;
   cameras: MediaDeviceInfo[];
   selectedDeviceId: string;
   customModels: CustomModel[];

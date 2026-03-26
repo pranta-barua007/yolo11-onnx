@@ -32,6 +32,7 @@ interface MediaDisplayProps {
   modelStatus: string;
   warmUpTime: string;
   inferenceTime: string;
+  fps: number;
   cameras: MediaDeviceInfo[];
   selectedDeviceId: string;
   setSelectedDeviceId: (val: string) => void;
@@ -51,6 +52,7 @@ export default function MediaDisplay(props: MediaDisplayProps) {
       modelStatus: props.modelStatus,
       warmUpTime: props.warmUpTime,
       inferenceTime: props.inferenceTime,
+      fps: props.fps,
       cameras: props.cameras,
       selectedDeviceId: props.selectedDeviceId,
       customModels: props.customModels,

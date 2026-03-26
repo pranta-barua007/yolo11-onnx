@@ -125,7 +125,7 @@ function CameraSelect() {
 }
 
 function PerformanceMetrics() {
-  const { state: { isModelLoaded, modelStatus, inferenceTime, warmUpTime } } = useMediaDisplay();
+  const { state: { isModelLoaded, modelStatus, inferenceTime, warmUpTime, fps } } = useMediaDisplay();
 
   return (
     <div className="flex items-center justify-between sm:justify-end gap-3 px-1 sm:px-0">
@@ -136,6 +136,15 @@ function PerformanceMetrics() {
         </div>
       ) : (
         <div className="flex items-center gap-3">
+          {fps > 0 && (
+            <>
+              <div className="flex items-center gap-1 text-[11px]">
+                <span className="font-medium text-slate-400">FPS</span>
+                <span className="font-bold text-indigo-600">{fps}</span>
+              </div>
+              <div className="w-px h-3 bg-slate-200" />
+            </>
+          )}
           <div className="flex items-center gap-1 text-[11px]">
             <span className="font-medium text-slate-400">Inf.</span>
             <span className="font-bold text-teal-600">{inferenceTime}ms</span>

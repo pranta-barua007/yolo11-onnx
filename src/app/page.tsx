@@ -7,6 +7,7 @@ import Header from "../components/Header";
 import { useYoloModel } from "../hooks/useYoloModel";
 import { useCamera } from "../hooks/useCamera";
 import { useImageProcessing } from "../hooks/useImageProcessing";
+import { useFps } from "../hooks/useFps";
 import "../styles/styles.css";
 import { useEffect } from "react";
 
@@ -35,6 +36,8 @@ export default function Home() {
     toggleCamera,
   } = useCamera();
 
+  const { fps, tick: fpsTick, reset: fpsReset } = useFps();
+
   const {
     imgSrc,
     inferenceTime,
@@ -58,18 +61,21 @@ export default function Home() {
   const [selectedDetectionIdx, setSelectedDetectionIdx] = useState<number | null>(null);
 
   const handleImageLoad = () => {
+    fpsReset();
     setSelectedDetectionIdx(null);
     processImage(config, workerRef, workerReadyRef);
   };
 
   const handleCameraLoad = () => {
+    fpsReset();
     setSelectedDetectionIdx(null);
-    processCamera(config, workerRef, workerReadyRef);
+    processCamera(config, workerRef, workerReadyRef, fpsTick);
   };
 
   const handleCameraToggle = () => {
     if (cameraStream) {
       clearOverlay();
+      fpsReset();
     }
     toggleCamera();
   };
@@ -138,6 +144,7 @@ export default function Home() {
             modelStatus={modelStatus}
             warmUpTime={warmUpTime}
             inferenceTime={inferenceTime}
+            fps={fps}
             cameras={cameras}
             selectedDeviceId={selectedDeviceId}
             setSelectedDeviceId={setSelectedDeviceId}

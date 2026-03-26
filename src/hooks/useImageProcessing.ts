@@ -196,7 +196,8 @@ export function useImageProcessing() {
   const processCamera = (
     config: Config,
     workerRef: MutableRefObject<Worker | null>,
-    workerReadyRef: MutableRefObject<boolean>
+    workerReadyRef: MutableRefObject<boolean>,
+    onFrameTick?: () => void
   ) => {
     if (!cameraRef.current || !inputCanvasRef.current || !overlayRef.current) return;
 
@@ -229,6 +230,7 @@ export function useImageProcessing() {
       }
 
       drawWorkerResults(msg, overlayRef, maskSnapshotRef, setDetails, setInferenceTime);
+      onFrameTick?.();
     };
 
     worker.addEventListener("message", handleWorkerMessage);
