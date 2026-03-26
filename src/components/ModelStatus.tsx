@@ -49,9 +49,9 @@ export default function ModelStatus({
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 sticky top-0">
             <tr>
-              <th className="p-3 font-semibold text-slate-600">#</th>
-              <th className="p-3 font-semibold text-slate-600">Class</th>
-              <th className="p-3 font-semibold text-slate-600">Conf.</th>
+              <th className="p-3 font-semibold text-slate-600 w-12 text-left">#</th>
+              <th className="p-3 font-semibold text-slate-600 text-left">Class</th>
+              <th className="p-3 font-semibold text-slate-600 text-right">Conf.</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -72,17 +72,17 @@ export default function ModelStatus({
                         : "hover:bg-slate-50"
                     }`}
                 >
-                  <td className="p-3 text-slate-500">{index + 1}</td>
-                  <td className="p-3">
+                  <td className="p-3 text-slate-500 text-left">{index + 1}</td>
+                  <td className="p-3 text-left">
                     <span className="flex items-center gap-2">
                       <span
                         className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
                         style={{ backgroundColor: dotColor }}
                       />
-                      <span className="font-medium text-slate-700">{classes[item.class_idx]}</span>
+                      <span className="font-medium text-slate-700 truncate max-w-[120px]" title={classes[item.class_idx]}>{classes[item.class_idx]}</span>
                     </span>
                   </td>
-                  <td className="p-3">
+                  <td className="p-3 text-right">
                     <Badge
                       variant={item.score > 0.8 ? "default" : "secondary"}
                       className={item.score > 0.8 ? "bg-teal-500 hover:bg-teal-600" : ""}
