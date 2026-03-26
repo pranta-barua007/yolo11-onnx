@@ -7,7 +7,7 @@ import defaultClasses from "../utils/yolo_classes.json";
 
 const input_shape = [1, 3, 640, 640];
 const iou_threshold = 0.25;
-const score_threshold = 0.55;
+const DEFAULT_SCORE_THRESHOLD = 0.55;
 
 /**
  * Manages the YOLO model lifecycle via Web Worker.
@@ -23,6 +23,7 @@ export function useYoloModel() {
   const [device, setDevice] = useState<string>(isWebGPUSupported() ? "webgpu" : "wasm");
   const [modelName, setModelName] = useState<string>("yolo11n-seg");
   const [modelStatus, setModelStatus] = useState<string>("Loading model...");
+  const [scoreThreshold, setScoreThreshold] = useState<number>(DEFAULT_SCORE_THRESHOLD);
 
   // Web Worker — sole owner of the ONNX session
   const workerRef = useRef<Worker | null>(null);
@@ -34,7 +35,7 @@ export function useYoloModel() {
     return customModel ? customModel.classes : defaultClasses;
   })();
 
-  const config = { input_shape, iou_threshold, score_threshold, classes: activeClasses };
+  const config = { input_shape, iou_threshold, score_threshold: scoreThreshold, classes: activeClasses };
 
   // Track whether a load is already in-flight
   const loadingRef = useRef<boolean>(false);
@@ -148,5 +149,7 @@ export function useYoloModel() {
     loadModel,
     addCustomModel,
     activeClasses,
+    scoreThreshold,
+    setScoreThreshold,
   };
 }

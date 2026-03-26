@@ -26,6 +26,8 @@ export default function Home() {
     config,
     addCustomModel,
     activeClasses,
+    scoreThreshold,
+    setScoreThreshold,
   } = useYoloModel();
 
   const {
@@ -145,6 +147,8 @@ export default function Home() {
             warmUpTime={warmUpTime}
             inferenceTime={inferenceTime}
             fps={fps}
+            scoreThreshold={scoreThreshold}
+            setScoreThreshold={setScoreThreshold}
             cameras={cameras}
             selectedDeviceId={selectedDeviceId}
             setSelectedDeviceId={setSelectedDeviceId}

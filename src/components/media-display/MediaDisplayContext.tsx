@@ -11,6 +11,7 @@ interface MediaDisplayState {
   warmUpTime: string;
   inferenceTime: string;
   fps: number;
+  scoreThreshold: number;
   cameras: MediaDeviceInfo[];
   selectedDeviceId: string;
   customModels: CustomModel[];
@@ -21,6 +22,7 @@ interface MediaDisplayState {
 interface MediaDisplayActions {
   setModelName: (val: string) => void;
   setDevice: (val: string) => void;
+  setScoreThreshold: (val: number) => void;
   setSelectedDeviceId: (val: string) => void;
   onCameraLoad: () => void;
   onImageLoad: () => void;

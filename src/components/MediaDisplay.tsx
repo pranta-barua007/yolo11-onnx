@@ -33,6 +33,8 @@ interface MediaDisplayProps {
   warmUpTime: string;
   inferenceTime: string;
   fps: number;
+  scoreThreshold: number;
+  setScoreThreshold: (val: number) => void;
   cameras: MediaDeviceInfo[];
   selectedDeviceId: string;
   setSelectedDeviceId: (val: string) => void;
@@ -53,6 +55,7 @@ export default function MediaDisplay(props: MediaDisplayProps) {
       warmUpTime: props.warmUpTime,
       inferenceTime: props.inferenceTime,
       fps: props.fps,
+      scoreThreshold: props.scoreThreshold,
       cameras: props.cameras,
       selectedDeviceId: props.selectedDeviceId,
       customModels: props.customModels,
@@ -62,6 +65,7 @@ export default function MediaDisplay(props: MediaDisplayProps) {
     actions: {
       setModelName: props.setModelName,
       setDevice: props.setDevice,
+      setScoreThreshold: props.setScoreThreshold,
       setSelectedDeviceId: props.setSelectedDeviceId,
       onCameraLoad: props.onCameraLoad,
       onImageLoad: props.onImageLoad,

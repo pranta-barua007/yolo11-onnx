@@ -125,7 +125,10 @@ function CameraSelect() {
 }
 
 function PerformanceMetrics() {
-  const { state: { isModelLoaded, modelStatus, inferenceTime, warmUpTime, fps } } = useMediaDisplay();
+  const {
+    state: { isModelLoaded, modelStatus, inferenceTime, warmUpTime, fps, scoreThreshold },
+    actions: { setScoreThreshold },
+  } = useMediaDisplay();
 
   return (
     <div className="flex items-center justify-between sm:justify-end gap-3 px-1 sm:px-0">
@@ -145,6 +148,22 @@ function PerformanceMetrics() {
               <div className="w-px h-3 bg-slate-200" />
             </>
           )}
+          <div className="flex items-center gap-1.5 text-[11px]">
+            <span className="font-medium text-slate-400">Conf.</span>
+            <input
+              type="range"
+              min={0.05}
+              max={0.95}
+              step={0.05}
+              value={scoreThreshold}
+              onChange={(e) => setScoreThreshold(parseFloat(e.target.value))}
+              className="w-16 h-1 accent-teal-500 cursor-pointer"
+            />
+            <span className="font-bold text-teal-600 w-8 text-right tabular-nums">
+              {(scoreThreshold * 100).toFixed(0)}%
+            </span>
+          </div>
+          <div className="w-px h-3 bg-slate-200" />
           <div className="flex items-center gap-1 text-[11px]">
             <span className="font-medium text-slate-400">Inf.</span>
             <span className="font-bold text-teal-600">{inferenceTime}ms</span>
