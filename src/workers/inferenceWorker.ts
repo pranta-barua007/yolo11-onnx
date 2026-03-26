@@ -1,6 +1,6 @@
 import * as ort from "onnxruntime-web";
 import { workerInferencePipeline } from "./workerPipeline";
-import { getModelFromCache, putModelInCache, deleteModelFromCache } from "../utils/model_cache";
+import { getModelFromCache, deleteModelFromCache } from "../utils/model_cache";
 
 // ── Worker-global state ──
 let session: ort.InferenceSession | null = null;
@@ -94,23 +94,10 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
             logSeverityLevel: 3,
           });
         } else {
-          // ── Built-in models: use URL-based loading (ONNX RT optimized path) ──
-          // Pre-cache the response so subsequent loads are instant via browser HTTP cache.
-          const cached = await getModelFromCache(msg.modelPath);
-          if (cached) {
-            ctx.postMessage({ type: "model-status", status: "Loading from cache..." });
-          } else {
-            ctx.postMessage({ type: "model-status", status: "Downloading model..." });
-            // Fetch and pre-cache for next time
-            const response = await fetch(msg.modelPath);
-            if (!response.ok) throw new Error(`Failed to fetch model: ${response.status}`);
-            const buffer = await response.arrayBuffer();
-            putModelInCache(msg.modelPath, buffer); // non-blocking
-          }
-
-          // Let ONNX RT fetch the URL — it uses an optimized internal path
-          // and the browser HTTP cache will serve the response instantly.
-          ctx.postMessage({ type: "model-status", status: "Initializing model..." });
+          // ── Built-in models: pass URL directly to ONNX RT ──
+          // ONNX RT has an optimized internal fetch path for URLs.
+          // The browser HTTP cache handles repeat loads automatically.
+          ctx.postMessage({ type: "model-status", status: "Loading model..." });
           session = await ort.InferenceSession.create(msg.modelPath, {
             executionProviders: [msg.device],
             graphOptimizationLevel: "all",
