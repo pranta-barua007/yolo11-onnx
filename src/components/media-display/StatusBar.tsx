@@ -167,7 +167,7 @@ function PerformanceMetrics() {
           <span className="text-[11px] font-medium">{modelStatus}</span>
         </div>
       ) : (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           {fps > 0 && (
             <>
               <div className="flex items-center gap-1 text-[11px]">
@@ -181,24 +181,27 @@ function PerformanceMetrics() {
             <span className="font-medium text-slate-400">Inf.</span>
             <span className="font-bold text-teal-600">{inferenceTime}ms</span>
           </div>
-          <div className="hidden sm:block w-px h-3 bg-slate-200" />
-          <div className="hidden sm:flex items-center gap-1 text-[11px]">
-            <span className="font-medium text-slate-400">Warmup</span>
+          <div className="w-px h-3 bg-slate-200" />
+          <div className="flex items-center gap-1 text-[11px]">
+            <span className="font-medium text-slate-400 hidden sm:inline">Warmup</span>
+            <span className="font-medium text-slate-400 sm:hidden" title="Warmup">W.</span>
             <span className="font-bold text-teal-600">{warmUpTime}ms</span>
           </div>
-          <div className="hidden sm:block w-px h-3 bg-slate-200" />
-          <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-            <span className="hidden sm:inline">Ready</span>
-          </span>
-          <button
-            onClick={reloadModel}
-            disabled={!!cameraStream}
-            title="Re-download model (clear cache)"
-            className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
+          
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+              <span className="hidden sm:inline">Ready</span>
+            </span>
+            <button
+              onClick={reloadModel}
+              disabled={!!cameraStream}
+              title="Re-download model (clear cache)"
+              className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
     </div>
