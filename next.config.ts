@@ -15,13 +15,13 @@ const nextConfig: NextConfig = {
   turbopack: {
     resolveAlias: {
       fs: {
-        browser: './src/empty.ts',
+        browser: 'empty-module',
       },
       path: {
-        browser: './src/empty.ts',
+        browser: 'empty-module',
       },
       crypto: {
-        browser: './src/empty.ts',
+        browser: 'empty-module',
       },
     },
   },
