@@ -1,4 +1,11 @@
+/**
+ * @deprecated This button bar is no longer used in the current UI.
+ * Replaced by Placeholder.tsx (upload/camera/examples) and StatusBar.tsx (model selector).
+ * Kept for reference only — safe to delete.
+ */
 "use client";
+
+import { Button } from "@/components/ui/button";
 
 interface ControlsProps {
   cameraStream: MediaStream | null;
@@ -24,11 +31,12 @@ export default function Controls({
   onAddModel,
 }: ControlsProps) {
   return (
-    <div id="btn-container" className="container w-full max-w-3xl flex flex-wrap gap-4 justify-center">
-      <button
-        className="btn"
+    <div id="btn-container" className="container w-full max-w-3xl flex flex-wrap gap-4 justify-center py-4">
+      <Button
+        variant={imgSrc ? "secondary" : "default"}
         disabled={!!cameraStream || !isModelLoaded}
         onClick={onImageToggle}
+        className="w-32"
       >
         {imgSrc ? "Close Image" : "Open Image"}
         <input
@@ -38,19 +46,22 @@ export default function Controls({
           ref={openImageRef}
           onChange={onOpenImage}
         />
-      </button>
-      
-      <button
-        className="btn"
+      </Button>
+
+      <Button
+        variant={cameraStream ? "destructive" : "default"}
         onClick={onCameraToggle}
         disabled={cameras.length === 0 || !!imgSrc || !isModelLoaded}
+        className="w-32"
       >
         {cameraStream ? "Close Camera" : "Open Camera"}
-      </button>
-      
-      <label className="btn cursor-pointer">
+      </Button>
+
+      <label className="cursor-pointer">
+        <Button variant="outline" asChild className="w-32 pointer-events-none">
+          <span>Add Model</span>
+        </Button>
         <input type="file" accept=".onnx" onChange={onAddModel} hidden />
-        <span>Add model</span>
       </label>
     </div>
   );

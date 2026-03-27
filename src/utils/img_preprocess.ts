@@ -2,98 +2,39 @@ import cv from '@techstark/opencv-js';
 import { Box } from './types';
 
 /**
- * Pre process input image.
+ * Pre-process input image for YOLO inference.
  *
- * Resize and normalize image.
+ * Directly resizes to model input size (e.g. 640×640) and normalizes to [0, 1].
+ * No stride-alignment or padding — keeps it simple and avoids creating
+ * enormous intermediate matrices for large images.
  *
- * @param {cv.Mat} mat - Pre process yolo model input image.
- * @param {number} input_width - Yolo model input width.
- * @param {number} input_height - Yolo model input height.
- * @returns {[cv.Mat, number, number]} Processed input mat and the x/y ratios.
+ * @param {cv.Mat} mat - Input image (RGBA from cv.imread).
+ * @param {number} modelWidth - Model input width (e.g. 640).
+ * @param {number} modelHeight - Model input height (e.g. 640).
+ * @returns {cv.Mat} Normalized blob ready for inference.
  */
-export function preProcess(mat: cv.Mat, input_width: number, input_height: number): [cv.Mat, number, number] {
+export function preProcess(
+  mat: cv.Mat,
+  modelWidth: number,
+  modelHeight: number
+): cv.Mat {
+  // RGBA → RGB
   cv.cvtColor(mat, mat, cv.COLOR_RGBA2RGB);
 
-  // Resize to dimensions divisible by 32
-  const [div_width, div_height] = divStride(32, mat.cols, mat.rows);
-  cv.resize(mat, mat, new cv.Size(div_width, div_height));
+  // Direct resize to model input size
+  cv.resize(mat, mat, new cv.Size(modelWidth, modelHeight));
 
-  // Padding to square
-  const max_dim = Math.max(div_width, div_height);
-  const right_pad = max_dim - div_width;
-  const bottom_pad = max_dim - div_height;
-  cv.copyMakeBorder(
-    mat,
-    mat,
-    0,
-    bottom_pad,
-    0,
-    right_pad,
-    cv.BORDER_CONSTANT,
-    new cv.Scalar(0, 0, 0)
-  );
-
-  // Calculate ratios
-  const xRatio = mat.cols / input_width;
-  const yRatio = mat.rows / input_height;
-
-  // Resize to input dimensions and normalize to [0, 1]
-  const preProcessed = cv.blobFromImage(
+  // Normalize to [0, 1] and create blob
+  const blob = cv.blobFromImage(
     mat,
     1 / 255.0,
-    new cv.Size(input_width, input_height),
+    new cv.Size(modelWidth, modelHeight),
     new cv.Scalar(0, 0, 0),
     false,
     false
   );
 
-  return [preProcessed, xRatio, yRatio];
-}
-
-/**
- * Pre process input image dynamically.
- *
- * Normalize image.
- *
- * @param {cv.Mat} mat - Pre process yolo model input image.
- * @returns {[cv.Mat, number, number]} Processed input mat and its dimensions.
- */
-export function preProcess_dynamic(mat: cv.Mat): [cv.Mat, number, number] {
-  cv.cvtColor(mat, mat, cv.COLOR_RGBA2RGB);
-
-  // Resize image to dimensions divisible by 32
-  const [div_width, div_height] = divStride(32, mat.cols, mat.rows);
-  // Resize and normalize to [0, 1]
-  const preProcessed = cv.blobFromImage(
-    mat,
-    1 / 255.0,
-    new cv.Size(div_width, div_height),
-    new cv.Scalar(0, 0, 0),
-    false,
-    false
-  );
-  return [preProcessed, div_width, div_height];
-}
-
-/**
- * Return width and height modified to be divisible by stride.
- * @param {number} stride - Stride value.
- * @param {number} width - Image width.
- * @param {number} height - Image height.
- * @returns {[number, number]} [width, height] divisible by stride.
- */
-export function divStride(stride: number, width: number, height: number): [number, number] {
-  width =
-    width % stride >= stride / 2
-      ? (Math.floor(width / stride) + 1) * stride
-      : Math.floor(width / stride) * stride;
-
-  height =
-    height % stride >= stride / 2
-      ? (Math.floor(height / stride) + 1) * stride
-      : Math.floor(height / stride) * stride;
-
-  return [width, height];
+  return blob;
 }
 
 /**
@@ -158,6 +99,75 @@ export function applyNMS(boxes: Box[], scores: number[], iou_threshold: number =
 
   return picked;
 }
+
+/**
+ * Extracts bounding box detections from raw YOLO output tensor data.
+ * Shared between main-thread and worker inference pipelines.
+ *
+ * @param predictionsData - Raw output0 tensor data.
+ * @param numPredictions - Number of predictions (output0.dims[2]).
+ * @param numScores - Number of class scores.
+ * @param numMaskWeights - Number of mask weight channels (typically 32).
+ * @param scoreThreshold - Minimum confidence score.
+ * @param xRatio - Scale factor: model space → overlay space (X).
+ * @param yRatio - Scale factor: model space → overlay space (Y).
+ * @returns Array of detection boxes with bbox, class_idx, score, and mask_weights.
+ */
+export function extractDetections(
+  predictionsData: Float32Array,
+  numPredictions: number,
+  numScores: number,
+  numMaskWeights: number,
+  scoreThreshold: number,
+  xRatio: number,
+  yRatio: number
+): Array<{ bbox: number[]; class_idx: number; score: number; mask_weights: Float32Array }> {
+  const NUM_BBOX_ATTRS = 4;
+  const bbox_data = predictionsData.subarray(0, numPredictions * NUM_BBOX_ATTRS);
+  const scores_data = predictionsData.subarray(
+    numPredictions * NUM_BBOX_ATTRS,
+    numPredictions * (NUM_BBOX_ATTRS + numScores)
+  );
+  const mask_weights_data = predictionsData.subarray(
+    numPredictions * (NUM_BBOX_ATTRS + numScores)
+  );
+
+  const results: Array<{ bbox: number[]; class_idx: number; score: number; mask_weights: Float32Array }> = [];
+
+  for (let i = 0; i < numPredictions; i++) {
+    let maxScore = 0;
+    let class_idx = -1;
+
+    for (let c = 0; c < numScores; c++) {
+      const score = scores_data[i + c * numPredictions];
+      if (score > maxScore) {
+        maxScore = score;
+        class_idx = c;
+      }
+    }
+    if (maxScore <= scoreThreshold) continue;
+
+    const cx = bbox_data[i];
+    const cy = bbox_data[i + numPredictions];
+    const bw_model = bbox_data[i + numPredictions * 2];
+    const bh_model = bbox_data[i + numPredictions * 3];
+
+    const w = bw_model * xRatio;
+    const h = bh_model * yRatio;
+    const x = cx * xRatio - 0.5 * w;
+    const y = cy * yRatio - 0.5 * h;
+
+    const mask_weights = new Float32Array(numMaskWeights);
+    for (let c = 0; c < numMaskWeights; c++) {
+      mask_weights[c] = mask_weights_data[i + c * numPredictions];
+    }
+
+    results.push({ bbox: [x, y, w, h], class_idx, score: maxScore, mask_weights });
+  }
+
+  return results;
+}
+
 
 /**
  * Ultralytics default color palette.

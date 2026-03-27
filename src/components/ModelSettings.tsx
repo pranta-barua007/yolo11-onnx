@@ -1,55 +1,87 @@
 "use client";
 
 import { CustomModel } from "../utils/types";
+import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface ModelSettingsProps {
-  deviceRef: React.RefObject<HTMLSelectElement | null>;
-  modelRef: React.RefObject<HTMLSelectElement | null>;
-  cameraSelectorRef: React.RefObject<HTMLSelectElement | null>;
-  customModels: CustomModel[];
-  cameras: MediaDeviceInfo[];
-  onLoadModel: () => void;
+    device: string;
+    setDevice: (val: string) => void;
+    modelName: string;
+    setModelName: (val: string) => void;
+    selectedDeviceId: string;
+    setSelectedDeviceId: (val: string) => void;
+    customModels: CustomModel[];
+    cameras: MediaDeviceInfo[];
 }
 
 export default function ModelSettings({
-  deviceRef,
-  modelRef,
-  cameraSelectorRef,
-  customModels,
-  cameras,
-  onLoadModel,
+    device,
+    setDevice,
+    modelName,
+    setModelName,
+    selectedDeviceId,
+    setSelectedDeviceId,
+    customModels,
+    cameras,
 }: ModelSettingsProps) {
-  return (
-    <div id="setting-container" className="container w-full max-w-3xl flex flex-wrap gap-4 justify-center">
-      <div className="flex flex-col">
-        <label htmlFor="device-selector">Backend:</label>
-        <select name="device-selector" ref={deviceRef} onChange={onLoadModel}>
-          <option value="webgpu">webGPU</option>
-          <option value="wasm">Wasm(cpu)</option>
-        </select>
-      </div>
-      <div className="flex flex-col">
-        <label htmlFor="model-selector">Model:</label>
-        <select name="model-selector" ref={modelRef} onChange={onLoadModel}>
-          <option value="yolo11n-seg">yolo11n-2.6M</option>
-          <option value="yolo11s-seg">yolo11s-9.4M</option>
-          {customModels.map((model, index) => (
-            <option key={index} value={model.url}>
-              {model.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex flex-col">
-        <label htmlFor="camera-selector">Select Camera:</label>
-        <select ref={cameraSelectorRef}>
-          {cameras.map((camera, index) => (
-            <option key={index} value={camera.deviceId}>
-              {camera.label || `Camera ${index + 1}`}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-  );
+    return (
+        <Card className="w-full max-w-3xl p-6 bg-foreground/50 backdrop-blur-sm border-slate-200 shadow-sm">
+            <div className="flex flex-wrap gap-6 justify-center items-end">
+                <div className="flex flex-col gap-2 min-w-[200px]">
+                    <Label htmlFor="device-selector" className="text-slate-600 font-medium">Processing Unit</Label>
+                    <Select onValueChange={(val) => {
+                        setDevice(val);
+                    }} value={device}>
+                        <SelectTrigger className="w-full bg-white border-slate-200">
+                            <SelectValue placeholder="Select Backend" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="webgpu">WebGPU (Recommended)</SelectItem>
+                            <SelectItem value="wasm">Wasm (CPU)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="flex flex-col gap-2 min-w-[200px]">
+                    <Label htmlFor="model-selector" className="text-slate-600 font-medium">AI Model</Label>
+                    <Select onValueChange={(val) => {
+                        setModelName(val);
+                    }} value={modelName}>
+                        <SelectTrigger className="w-full bg-white border-slate-200">
+                            <SelectValue placeholder="Select Model" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="yolo11n-seg">11n-seg (High Speed)</SelectItem>
+                            <SelectItem value="yolo11s-seg">11s-seg (High Accuracy)</SelectItem>
+                            {customModels.map((model, index) => (
+                                <SelectItem key={index} value={model.url}>
+                                    {model.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="flex flex-col gap-2 min-w-[200px]">
+                    <Label htmlFor="camera-selector" className="text-slate-600 font-medium">Camera Source</Label>
+                    <Select onValueChange={(val) => {
+                        setSelectedDeviceId(val);
+                    }} value={selectedDeviceId}>
+                        <SelectTrigger className="w-full bg-white border-slate-200">
+                            <SelectValue placeholder="Select Camera" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {cameras.map((camera, index) => (
+                                <SelectItem key={index} value={camera.deviceId}>
+                                    {camera.label || `Camera ${index + 1}`}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+        </Card>
+    );
 }
