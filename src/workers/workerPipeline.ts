@@ -22,6 +22,7 @@ interface Config {
   iou_threshold: number;
   score_threshold: number;
   classes?: string[];
+  capabilities?: ("D" | "S" | "P")[];
 }
 
 interface WorkerBox {
@@ -78,7 +79,8 @@ export async function workerInferencePipeline(
   session: ort.InferenceSession,
   config: Config,
   overlayW: number,
-  overlayH: number
+  overlayH: number,
+  inputName: string
 ): Promise<PipelineResult> {
   const modelW = config.input_shape[3];
   const modelH = config.input_shape[2];
@@ -88,7 +90,7 @@ export async function workerInferencePipeline(
   blob.delete();
 
   const start = performance.now();
-  const output = await session.run({ images: input_tensor });
+  const output = await session.run({ [inputName]: input_tensor });
   const end = performance.now();
   input_tensor.dispose();
 
@@ -105,8 +107,8 @@ export async function workerInferencePipeline(
   const activeClasses = config.classes ?? DEFAULT_CLASSES;
   const NUM_SCORES = activeClasses.length;
   const NUM_CHANNELS = output0.dims[1];
-  const NUM_MASK_WEIGHTS = Math.max(0, NUM_CHANNELS - (4 + NUM_SCORES)); // dynamically infer based on tensor (116 - 84 = 32)
-  const isSegmentation = output1 && output1.dims.length === 4 && NUM_MASK_WEIGHTS > 0;
+  const NUM_MASK_WEIGHTS = Math.max(0, NUM_CHANNELS - (4 + NUM_SCORES)); 
+  const isSegmentation = config.capabilities ? config.capabilities.includes("S") : (output1 && output1.dims.length === 4 && NUM_MASK_WEIGHTS > 0);
 
   const predictionsData = output0.data as Float32Array;
   

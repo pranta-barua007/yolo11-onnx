@@ -81,24 +81,6 @@ export function useYoloModel() {
           setIsModelLoaded(true);
           loadingRef.current = false;
 
-          // If the newly loaded model is a custom model with capabilities, persist them.
-          if (msg.capabilities && msg.modelPath && msg.modelPath.startsWith("custom:")) {
-            setCustomModels((prev) => {
-              const modelIndex = prev.findIndex((m) => m.url === msg.modelPath);
-              if (modelIndex > -1 && !prev[modelIndex].capabilities) {
-                const updated = [...prev];
-                updated[modelIndex] = { ...updated[modelIndex], capabilities: msg.capabilities };
-                updateCustomModelMetadata({
-                  name: updated[modelIndex].name,
-                  classes: updated[modelIndex].classes,
-                  cacheKey: updated[modelIndex].url,
-                  capabilities: msg.capabilities,
-                });
-                return updated;
-              }
-              return prev;
-            });
-          }
         } else if (msg.status === "webgpu-failed") {
           console.warn("[useYoloModel] WebGPU failed in worker, falling back to WASM...");
           loadingRef.current = false;
@@ -184,7 +166,7 @@ export function useYoloModel() {
    * Called from AddModelDialog with the file's ArrayBuffer.
    */
   const addCustomModel = useCallback(async (model: CustomModel & { buffer?: ArrayBuffer }) => {
-    const cacheKey = `custom:${model.name}`;
+    const cacheKey = `/custom-models/${model.name}`;
 
     // Persist bytes to Cache API if buffer provided
     if (model.buffer) {
@@ -196,6 +178,7 @@ export function useYoloModel() {
       name: model.name,
       classes: model.classes,
       cacheKey,
+      capabilities: model.capabilities,
     });
 
     // Register in React state
@@ -203,6 +186,7 @@ export function useYoloModel() {
       name: model.name,
       url: cacheKey,
       classes: model.classes,
+      capabilities: model.capabilities,
     };
 
     setCustomModels((prev) => {
