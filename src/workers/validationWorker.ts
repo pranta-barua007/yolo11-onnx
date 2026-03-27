@@ -36,8 +36,8 @@ self.onmessage = async (e: MessageEvent) => {
 
       if (output1 && output1.dims.length === 4 && NUM_MASK_WEIGHTS > 0) {
         capabilities.push("S");
-      } else if (NUM_MASK_WEIGHTS > 0) {
-        capabilities.push("P"); // Keypoints (future)
+      } else if (NUM_MASK_WEIGHTS === 51) {
+        capabilities.push("P"); // Keypoints (17 * 3 = 51)
       }
     }
     

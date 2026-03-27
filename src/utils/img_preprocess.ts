@@ -121,7 +121,7 @@ export function extractDetections(
   scoreThreshold: number,
   xRatio: number,
   yRatio: number
-): Array<{ bbox: number[]; class_idx: number; score: number; mask_weights: Float32Array }> {
+): Array<{ bbox: number[]; class_idx: number; score: number; mask_weights: Float32Array; keypoints?: { x: number; y: number; score: number }[] }> {
   const NUM_BBOX_ATTRS = 4;
   const bbox_data = predictionsData.subarray(0, numPredictions * NUM_BBOX_ATTRS);
   const scores_data = predictionsData.subarray(
@@ -132,7 +132,7 @@ export function extractDetections(
     numPredictions * (NUM_BBOX_ATTRS + numScores)
   );
 
-  const results: Array<{ bbox: number[]; class_idx: number; score: number; mask_weights: Float32Array }> = [];
+  const results: Array<{ bbox: number[]; class_idx: number; score: number; mask_weights: Float32Array; keypoints?: { x: number; y: number; score: number }[] }> = [];
 
   for (let i = 0; i < numPredictions; i++) {
     let maxScore = 0;
@@ -220,4 +220,66 @@ export class Colors {
     Colors.cache[key] = result;
     return result;
   }
+}
+
+/**
+ * Extracts bounding box detections and 17 COCO keypoints from raw YOLO pose tensor data.
+ *
+ * @param predictionsData - Raw output0 tensor data [1, 56, 8400].
+ * @param numPredictions - Number of predictions (output0.dims[2] = 8400).
+ * @param scoreThreshold - Minimum confidence score.
+ * @param xRatio - Scale factor: model space → overlay space (X).
+ * @param yRatio - Scale factor: model space → overlay space (Y).
+ * @returns Array of detection boxes with bbox, score, and keypoints array.
+ */
+export function extractPoseDetections(
+  predictionsData: Float32Array,
+  numPredictions: number,
+  scoreThreshold: number,
+  xRatio: number,
+  yRatio: number
+): Array<{ bbox: number[]; class_idx: number; score: number; mask_weights: Float32Array; keypoints: { x: number; y: number; score: number }[] }> {
+  const NUM_BBOX_ATTRS = 5;
+  const NUM_KEYPOINTS = 17;
+  const KEYPOINT_DIMS = 3;
+
+  const bboxData = predictionsData.subarray(0, numPredictions * NUM_BBOX_ATTRS);
+  const keypointsData = predictionsData.subarray(numPredictions * NUM_BBOX_ATTRS);
+  
+  const results = [];
+
+  for (let i = 0; i < numPredictions; i++) {
+    const score = bboxData[i + numPredictions * 4];
+    if (score <= scoreThreshold) continue;
+
+    const cx = bboxData[i];
+    const cy = bboxData[i + numPredictions];
+    const bw_model = bboxData[i + numPredictions * 2];
+    const bh_model = bboxData[i + numPredictions * 3];
+
+    const w = bw_model * xRatio;
+    const h = bh_model * yRatio;
+    const x = cx * xRatio - 0.5 * w;
+    const y = cy * yRatio - 0.5 * h;
+
+    const keypoints = new Array(NUM_KEYPOINTS);
+    for (let kp = 0; kp < NUM_KEYPOINTS; kp++) {
+      const baseIdx = kp * KEYPOINT_DIMS * numPredictions + i;
+      keypoints[kp] = {
+        x: keypointsData[baseIdx] * xRatio,
+        y: keypointsData[baseIdx + numPredictions] * yRatio,
+        score: keypointsData[baseIdx + numPredictions * 2],
+      };
+    }
+
+    results.push({
+      bbox: [x, y, w, h],
+      class_idx: 0,
+      score,
+      mask_weights: new Float32Array(0),
+      keypoints
+    });
+  }
+
+  return results;
 }

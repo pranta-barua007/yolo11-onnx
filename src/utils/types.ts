@@ -3,6 +3,7 @@ export interface Box {
   class_idx: number;
   score: number;
   mask_weights: Float32Array;
+  keypoints?: { x: number; y: number; score: number }[];
 }
 
 export interface CustomModel {

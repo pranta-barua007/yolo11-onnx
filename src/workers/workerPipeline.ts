@@ -14,7 +14,7 @@
  */
 import * as ort from "onnxruntime-web";
 import cv from "@techstark/opencv-js";
-import { applyNMS, extractDetections } from "../utils/img_preprocess";
+import { applyNMS, extractDetections, extractPoseDetections } from "../utils/img_preprocess";
 import { generateMaskOverlay } from "../utils/mask_processing";
 
 interface Config {
@@ -29,6 +29,7 @@ interface WorkerBox {
   bbox: number[];
   class_idx: number;
   score: number;
+  keypoints?: { x: number; y: number; score: number }[];
 }
 
 export interface PipelineResult {
@@ -129,10 +130,26 @@ export async function workerInferencePipeline(
   const yRatio = overlayH / modelH;
 
   // ── Post-process: shared functions ──
-  const results = extractDetections(
-    predictionsData, NUM_PREDICTIONS, NUM_SCORES,
-    NUM_MASK_WEIGHTS, config.score_threshold, xRatio, yRatio
-  );
+  const isPose = config.capabilities ? config.capabilities.includes("P") : false;
+
+  let results: Array<{
+    bbox: number[];
+    class_idx: number;
+    score: number;
+    mask_weights: Float32Array;
+    keypoints?: { x: number; y: number; score: number }[];
+  }>;
+  if (isPose) {
+    results = extractPoseDetections(
+      predictionsData, NUM_PREDICTIONS,
+      config.score_threshold, xRatio, yRatio
+    );
+  } else {
+    results = extractDetections(
+      predictionsData, NUM_PREDICTIONS, NUM_SCORES,
+      NUM_MASK_WEIGHTS, config.score_threshold, xRatio, yRatio
+    );
+  }
 
   const scoresArray = results.map((r) => r.score);
   const selected_indices = applyNMS(results, scoresArray, config.iou_threshold);
@@ -154,6 +171,7 @@ export async function workerInferencePipeline(
     bbox: r.bbox,
     class_idx: r.class_idx,
     score: r.score,
+    keypoints: r.keypoints,
   }));
 
   return {
