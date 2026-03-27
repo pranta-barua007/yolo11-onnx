@@ -27,7 +27,7 @@ export default function ModelStatus({
   };
 
   return (
-    <Card className="w-full p-4 h-full flex flex-col border-border/40 shadow-sm bg-card/50 backdrop-blur-md rounded-2xl">
+    <Card className="w-full h-full flex flex-col border-border/40 shadow-sm bg-card rounded-2xl overflow-hidden p-4">
 
       {/* Header row: label + count + save */}
       <div className="flex items-center justify-between mb-3 px-1">
