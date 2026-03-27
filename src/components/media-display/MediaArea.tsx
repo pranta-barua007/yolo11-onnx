@@ -68,7 +68,7 @@ export default function MediaArea() {
 
           {/* Close button - Anchored to the parent container */}
           <button
-            className="absolute top-0 right-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-destructive/5 border border-transparent hover:bg-destructive/20 hover:border-destructive/30 text-destructive/40 hover:text-destructive transition-all duration-300 pointer-events-auto backdrop-blur-sm md:top-2 md:right-2"
+            className="absolute top-0 right-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-destructive/25 border border-transparent hover:bg-destructive/20 hover:border-destructive/30 text-destructive/40 hover:text-destructive transition-all duration-300 pointer-events-auto backdrop-blur-sm md:top-2 md:right-2"
             onClick={() => {
               if (cameraStream) onCameraToggle();
               if (imgSrc) onImageToggle();
