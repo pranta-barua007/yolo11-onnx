@@ -1,9 +1,10 @@
 import type { NextConfig } from "next";
+import { GITHUB_REPO_NAME } from "./src/utils/paths";
 
 const nextConfig: NextConfig = {
   output: 'export',
-  // only need basepath in CI
-  ...(process.env.NODE_ENV === 'production' && { basePath: '/yolo11-onnx' }),
+  // only need basepath in Github CI for pages deployment
+  ...(process.env.NODE_ENV === 'production' && { basePath: `/${GITHUB_REPO_NAME}` }),
   trailingSlash: true,
   images: {
     unoptimized: true,
