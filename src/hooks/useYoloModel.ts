@@ -5,9 +5,11 @@ import { CustomModel } from "../utils/types";
 import { isWebGPUSupported } from "../utils/gpu_check";
 import {
   putModelInCache,
+  deleteModelFromCache,
   getCustomModelsMetadata,
   addCustomModelMetadata,
   updateCustomModelMetadata,
+  removeCustomModelMetadata,
 } from "../utils/model_cache";
 import defaultClasses from "../utils/yolo_classes.json";
 import { BASE_PATH } from "../utils/paths";
@@ -210,6 +212,15 @@ export function useYoloModel() {
     setModelName(cacheKey);
   }, []);
 
+  const removeCustomModel = useCallback((url: string) => {
+    deleteModelFromCache(url);
+    removeCustomModelMetadata(url);
+    
+    setCustomModels((prev) => prev.filter((m) => m.url !== url));
+    
+    setModelName((prev) => (prev === url ? "yolo11n-seg" : prev));
+  }, []);
+
   // Initialize worker on mount
   useEffect(() => {
     initWorker();
@@ -242,6 +253,7 @@ export function useYoloModel() {
     loadModel,
     reloadModel,
     addCustomModel,
+    removeCustomModel,
     activeClasses,
     scoreThreshold,
     setScoreThreshold,

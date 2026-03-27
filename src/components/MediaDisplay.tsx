@@ -40,6 +40,7 @@ interface MediaDisplayProps {
   setSelectedDeviceId: (val: string) => void;
   customModels: CustomModel[];
   addCustomModel: (model: CustomModel & { buffer?: ArrayBuffer }) => void;
+  removeCustomModel: (url: string) => void;
   reloadModel: () => void;
 }
 
@@ -75,6 +76,7 @@ export default function MediaDisplay(props: MediaDisplayProps) {
       onImageToggle: props.onImageToggle,
       onOpenImage: props.onOpenImage,
       addCustomModel: props.addCustomModel,
+      removeCustomModel: props.removeCustomModel,
       reloadModel: props.reloadModel,
     },
     meta: {

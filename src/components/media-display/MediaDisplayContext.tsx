@@ -31,6 +31,7 @@ interface MediaDisplayActions {
   onImageToggle: () => void;
   onOpenImage: (event: React.ChangeEvent<HTMLInputElement>) => void;
   addCustomModel: (model: CustomModel & { buffer?: ArrayBuffer }) => void;
+  removeCustomModel: (url: string) => void;
   reloadModel: () => void;
 }
 

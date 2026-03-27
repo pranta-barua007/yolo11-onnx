@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { useState } from "react";
-import { Cpu, Package, Video, ChevronDown, ChevronUp, Sliders, Gauge, RefreshCw } from "lucide-react";
+import { Cpu, Package, Video, ChevronDown, ChevronUp, Sliders, Gauge, RefreshCw, Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -66,7 +66,7 @@ function DeviceSelect() {
 function ModelSelect() {
   const {
     state: { modelName, customModels },
-    actions: { setModelName, addCustomModel },
+    actions: { setModelName, addCustomModel, removeCustomModel },
   } = useMediaDisplay();
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -92,10 +92,31 @@ function ModelSelect() {
             </div>
           </SelectItem>
           {customModels.filter(model => model.url).map((model) => (
-            <SelectItem key={model.url} value={model.url} className="text-xs font-mono focus:bg-primary/20">
-              <div className="flex items-center justify-between w-full gap-2">
+            <SelectItem key={model.url} value={model.url} className="text-xs font-mono focus:bg-primary/20 group pr-8">
+              <div className="flex items-center justify-between w-full min-w-[140px] gap-2">
                 <span className="truncate">{model.name}</span>
-                <CapabilityBadges capabilities={model.capabilities} />
+                <div className="flex items-center gap-1">
+                  <CapabilityBadges capabilities={model.capabilities} />
+                  <button
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onPointerUp={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      removeCustomModel(model.url);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-destructive hover:bg-destructive/10 transition-opacity ml-1 flex-shrink-0"
+                    title="Delete custom model"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
             </SelectItem>
           ))}
