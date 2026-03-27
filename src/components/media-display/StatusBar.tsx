@@ -207,13 +207,13 @@ function PerformanceMetrics() {
 }
 
 const StatusBarSkeleton = (
-  <div className="w-full flex items-center justify-between animate-pulse px-4 py-3">
+  <div className="w-full flex items-center justify-between animate-pulse">
     <div className="flex gap-4">
-      <div className="h-8 w-24 bg-foreground/5 rounded-full" />
-      <div className="h-8 w-32 bg-foreground/5 rounded-full hidden md:block" />
-      <div className="h-8 w-40 bg-foreground/5 rounded-full hidden md:block" />
+      <div className="h-8 w-16 bg-foreground/5 rounded-full" />
+      <div className="h-8 w-24 bg-foreground/5 rounded-full hidden md:block opacity-60" />
+      <div className="h-8 w-28 bg-foreground/5 rounded-full hidden md:block opacity-40" />
     </div>
-    <div className="h-8 w-32 bg-foreground/5 rounded-full" />
+    <div className="h-8 w-32 bg-foreground/5 rounded-full opacity-60" />
   </div>
 );
 
