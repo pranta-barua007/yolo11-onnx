@@ -28,6 +28,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
   const [manualInput, setManualInput] = useState("");
   const [classError, setClassError] = useState<string | null>(null);
   const [classMode, setClassMode] = useState<"json" | "manual">("json");
+  const [isValidating, setIsValidating] = useState(false);
 
   const modelInputRef = useRef<HTMLInputElement>(null);
   const classInputRef = useRef<HTMLInputElement>(null);
@@ -38,6 +39,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
     setManualInput("");
     setClassError(null);
     setClassMode("json");
+    setIsValidating(false);
   }, []);
 
   const handleModelSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,18 +125,50 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
   const handleSubmit = async () => {
     if (!modelFile || classes.length === 0) return;
 
-    // Read file as ArrayBuffer for caching (non-blocking via FileReader)
-    const buffer = await modelFile.arrayBuffer();
-    const cacheKey = `custom:${modelFile.name.replace(".onnx", "")}`;
+    setIsValidating(true);
+    setClassError(null);
 
-    onAddModel({
-      name: modelFile.name.replace(".onnx", ""),
-      url: cacheKey,
-      classes,
-      buffer,
-    });
-    resetState();
-    onOpenChange(false);
+    try {
+      // Read file as ArrayBuffer for caching
+      const buffer = await modelFile.arrayBuffer();
+      
+      // Perform non-blocking structural validation via Web Worker
+      const capabilities = await new Promise<("D" | "S" | "P")[]>((resolve, reject) => {
+        const worker = new Worker(new URL("../workers/validationWorker.ts", import.meta.url), { type: "module" });
+        worker.onmessage = (e) => {
+          if (e.data.status === "success") {
+            resolve(e.data.capabilities);
+          } else {
+            reject(new Error(e.data.error || "Invalid ONNX Model"));
+          }
+          worker.terminate();
+        };
+        worker.onerror = () => {
+          reject(new Error("Validation worker crashed"));
+          worker.terminate();
+        };
+        // Safely transfer a copy to the worker so we don't detach the primary buffer
+        const bufferCopy = buffer.slice(0);
+        worker.postMessage({ buffer: bufferCopy, classesConfig: classes }, [bufferCopy]);
+      });
+
+      const cacheKey = `custom:${modelFile.name.replace(".onnx", "")}`;
+
+      onAddModel({
+        name: modelFile.name.replace(".onnx", ""),
+        url: cacheKey,
+        classes,
+        capabilities,
+        buffer,
+      });
+      resetState();
+      onOpenChange(false);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Ensure it is a valid YOLO ONNX format.";
+      setClassError(`Failed to validate model. ${errorMessage}`);
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   const isValid = modelFile && classes.length > 0;
@@ -313,10 +347,15 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!isValid}
+            disabled={!isValid || isValidating}
             className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[100px] shadow-[0_0_15px_rgba(168,85,247,0.3)] disabled:shadow-none transition-all duration-300"
           >
-            Add Model
+            {isValidating ? (
+              <span className="flex items-center gap-2">
+                <span className="w-3.5 h-3.5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                Validating...
+              </span>
+            ) : "Add Model"}
           </Button>
         </DialogFooter>
       </DialogContent>
