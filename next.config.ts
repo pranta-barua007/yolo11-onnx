@@ -12,6 +12,19 @@ const nextConfig: NextConfig = {
     browserToTerminal: true,
   },
   serverExternalPackages: ["@techstark/opencv-js"],
+  turbopack: {
+    resolveAlias: {
+      fs: {
+        browser: './src/empty.ts',
+      },
+      path: {
+        browser: './src/empty.ts',
+      },
+      crypto: {
+        browser: './src/empty.ts',
+      },
+    },
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
