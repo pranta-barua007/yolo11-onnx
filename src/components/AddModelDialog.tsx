@@ -177,7 +177,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
           ) : (
             <button
               onClick={() => modelInputRef.current?.click()}
-              className="w-full p-6 border-2 border-dashed border-border/50 rounded-lg hover:border-primary/50 hover:bg-white/5 transition-all flex flex-col items-center gap-2 group"
+              className="w-full p-6 border-2 border-dashed border-border/50 rounded-lg hover:border-primary/50 hover:bg-foreground/5 transition-all flex flex-col items-center gap-2 group"
             >
               <Upload className="w-8 h-8 text-muted-foreground group-hover:text-foreground transition-colors" />
               <span className="text-sm text-muted-foreground font-medium">Click to upload .onnx model</span>
@@ -197,12 +197,12 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
           <Label className="font-semibold text-sm text-foreground">Model Classes</Label>
 
           {/* Mode Toggle */}
-          <div className="flex gap-1 p-1 bg-black/20 border border-white/5 rounded-lg w-fit">
+          <div className="flex gap-1 p-1 bg-black/5 dark:bg-black/20 border border-foreground/5 rounded-lg w-fit">
             <button
               onClick={() => { setClassMode("json"); setClassError(null); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
                 classMode === "json"
-                  ? "bg-white/10 text-foreground shadow-sm ring-1 ring-white/10"
+                  ? "bg-foreground/10 text-foreground shadow-sm ring-1 ring-foreground/10"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -213,7 +213,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
               onClick={() => { setClassMode("manual"); setClassError(null); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
                 classMode === "manual"
-                  ? "bg-white/10 text-foreground shadow-sm ring-1 ring-white/10"
+                  ? "bg-foreground/10 text-foreground shadow-sm ring-1 ring-foreground/10"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -226,7 +226,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
             <div>
               <button
                 onClick={() => classInputRef.current?.click()}
-                className="w-full p-4 border-2 border-dashed border-border/50 rounded-lg hover:border-primary/50 hover:bg-white/5 transition-all flex items-center gap-3"
+                className="w-full p-4 border-2 border-dashed border-border/50 rounded-lg hover:border-primary/50 hover:bg-foreground/5 transition-all flex items-center gap-3"
               >
                 <FileJson className="w-5 h-5 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Upload classes JSON</span>
@@ -284,12 +284,12 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
                   {classes.length} classes found
                 </span>
               </div>
-              <div className="flex flex-wrap gap-1.5 p-3 bg-black/20 border border-white/5 rounded-lg max-h-32 overflow-y-auto">
+              <div className="flex flex-wrap gap-1.5 p-3 bg-black/5 dark:bg-black/20 border border-foreground/5 rounded-lg max-h-32 overflow-y-auto">
                 {classes.map((cls, idx) => (
                   <Badge
                     key={idx}
                     variant="secondary"
-                    className="flex items-center gap-1 text-xs px-2 py-0.5 bg-white/10 hover:bg-white/20 text-foreground"
+                    className="flex items-center gap-1 text-xs px-2 py-0.5 bg-foreground/10 hover:bg-foreground/20 text-foreground"
                   >
                     <span className="text-[10px] text-muted-foreground font-mono">{idx}</span>
                     {cls}
@@ -308,7 +308,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
 
         {/* ── Actions ── */}
         <DialogFooter className="pt-4 border-t border-border/50 mt-6">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="border-border/50 text-muted-foreground hover:bg-white/5 hover:text-foreground">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="border-border/50 text-muted-foreground hover:bg-foreground/5 hover:text-foreground">
             Cancel
           </Button>
           <Button

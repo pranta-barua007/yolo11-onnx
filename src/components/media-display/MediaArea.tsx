@@ -36,11 +36,12 @@ export default function MediaArea() {
       {/* Media Wrapper for correct overlay alignment */}
       {hasMedia && (
         <div className="absolute inset-4 md:inset-6 flex justify-center items-center pointer-events-none overflow-hidden">
-          <div className="relative inline-flex justify-center items-center max-w-full max-h-full pointer-events-auto rounded-[1rem]">
+          <div className="relative inline-block pointer-events-auto leading-none">
             {/* Video for camera feed */}
             <video
               ref={cameraRef}
-              className={`max-w-full max-h-full w-auto h-auto rounded-lg shadow-sm ${!cameraStream ? 'hidden' : 'block'}`}
+              className={`rounded-lg shadow-sm ${!cameraStream ? 'hidden' : 'block'}`}
+              style={{ maxHeight: 'calc(100vh - 13rem)', maxWidth: '100%' }}
               onLoadedData={onCameraLoad}
               autoPlay
               playsInline
@@ -55,14 +56,14 @@ export default function MediaArea() {
                 ref={imgRef}
                 src={imgSrc}
                 onLoad={onImageLoad}
-                className="max-w-full max-h-full w-auto h-auto rounded-lg shadow-sm"
+                className="rounded-lg shadow-sm"
                 alt="Input"
-                style={{ maxHeight: '100%', maxWidth: '100%' }}
+                style={{ maxHeight: 'calc(100vh - 13rem)', maxWidth: '100%' }}
               />
             ) : null}
 
             {/* Overlay canvas */}
-            <canvas ref={overlayRef} className="absolute inset-0 w-full h-full pointer-events-none rounded-lg" style={{ maxHeight: '100%', maxWidth: '100%' }} />
+            <canvas ref={overlayRef} className="absolute inset-0 w-full h-full pointer-events-none rounded-lg" />
             
             {/* Close button - Anchored to the image wrapper */}
             <button

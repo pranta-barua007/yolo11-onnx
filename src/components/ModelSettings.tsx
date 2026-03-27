@@ -27,7 +27,7 @@ export default function ModelSettings({
     cameras,
 }: ModelSettingsProps) {
     return (
-        <Card className="w-full max-w-3xl p-6 bg-white/50 backdrop-blur-sm border-slate-200 shadow-sm">
+        <Card className="w-full max-w-3xl p-6 bg-foreground/50 backdrop-blur-sm border-slate-200 shadow-sm">
             <div className="flex flex-wrap gap-6 justify-center items-end">
                 <div className="flex flex-col gap-2 min-w-[200px]">
                     <Label htmlFor="device-selector" className="text-slate-600 font-medium">Processing Unit</Label>
