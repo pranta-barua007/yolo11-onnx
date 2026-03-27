@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Moon, Sun } from "lucide-react"
+import { Moon, Sun, Check } from "lucide-react"
 import { useTheme } from "next-themes"
 
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function ThemeToggle() {
-  const { setTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
 
   return (
     <DropdownMenu>
@@ -24,15 +24,27 @@ export function ThemeToggle() {
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-background/95 backdrop-blur-md border-border/50">
-        <DropdownMenuItem onClick={() => setTheme("light")} className="focus:bg-primary/20 cursor-pointer">
+      <DropdownMenuContent align="end" className="bg-background/95 backdrop-blur-xl border-border/50 min-w-[120px] p-1.5 animate-in fade-in zoom-in-95 duration-200">
+        <DropdownMenuItem 
+          onClick={() => setTheme("light")} 
+          className={`flex items-center justify-between gap-2 px-3 py-2 text-xs font-medium cursor-pointer rounded-lg transition-colors ${theme === "light" ? "bg-primary/15 text-primary" : "focus:bg-muted"}`}
+        >
           Light
+          {theme === "light" && <Check className="w-3.5 h-3.5" />}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")} className="focus:bg-primary/20 cursor-pointer">
+        <DropdownMenuItem 
+          onClick={() => setTheme("dark")} 
+          className={`flex items-center justify-between gap-2 px-3 py-2 text-xs font-medium cursor-pointer rounded-lg transition-colors ${theme === "dark" ? "bg-primary/15 text-primary" : "focus:bg-muted"}`}
+        >
           Dark
+          {theme === "dark" && <Check className="w-3.5 h-3.5" />}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")} className="focus:bg-primary/20 cursor-pointer">
+        <DropdownMenuItem 
+          onClick={() => setTheme("system")} 
+          className={`flex items-center justify-between gap-2 px-3 py-2 text-xs font-medium cursor-pointer rounded-lg transition-colors ${theme === "system" ? "bg-primary/15 text-primary" : "focus:bg-muted"}`}
+        >
           System
+          {theme === "system" && <Check className="w-3.5 h-3.5" />}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
