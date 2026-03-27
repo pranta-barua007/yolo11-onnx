@@ -18,8 +18,10 @@ export default function Header({ rightSlot }: HeaderProps) {
                 <div className="flex items-center gap-4">
                     {/* Brand */}
                     <Link href="/" className="flex items-center gap-3 active:scale-95 transition-transform duration-200">
-                        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-black text-2xl shadow-sm ring-1 ring-primary/20">
-                            D
+                        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-primary-foreground shadow-sm ring-1 ring-primary/20">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                                <path d="M5 3l7 9 7-9M12 12v9" />
+                            </svg>
                         </div>
                         <span className="hidden sm:flex text-lg font-bold text-foreground tracking-tight items-baseline">
                             YOLO
