@@ -62,7 +62,7 @@ export default function ModelStatus({
       </div>
 
       <div className="flex-1 overflow-auto rounded-xl border border-border/40 bg-transparent scrollbar-hide flex flex-col">
-        {selectedDetectionIdx === null ? (
+        {(selectedDetectionIdx === null || !details[selectedDetectionIdx]?.keypoints) ? (
           <table className="w-full text-left text-sm">
             <thead className="bg-muted/50 sticky top-0 backdrop-blur-md z-10">
               <tr>
@@ -73,6 +73,8 @@ export default function ModelStatus({
             </thead>
             <tbody className="divide-y divide-border/40">
               {details.map((item, index) => {
+                const isSelected = selectedDetectionIdx === index;
+                const isDimmed = selectedDetectionIdx !== null && !isSelected;
                 const color = Colors.getColor(item.class_idx, 1.0);
                 const dotColor = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
 
@@ -80,7 +82,12 @@ export default function ModelStatus({
                   <tr
                     key={index}
                     onClick={() => handleRowClick(index)}
-                    className="cursor-pointer transition-colors duration-200 hover:bg-muted/50"
+                    className={`cursor-pointer transition-colors duration-200 ${isSelected
+                        ? "bg-primary/10"
+                        : isDimmed
+                          ? "opacity-40 hover:opacity-100"
+                          : "hover:bg-muted/50"
+                      }`}
                   >
                     <td className="p-3 text-muted-foreground text-left">{index + 1}</td>
                     <td className="p-3 text-left">
@@ -173,12 +180,6 @@ export default function ModelStatus({
                   </div>
                 </div>
               ))}
-              
-              {!details[selectedDetectionIdx].keypoints && (
-                <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
-                  <p className="text-xs italic">No pose data available for this model.</p>
-                </div>
-              )}
             </div>
           </div>
         )}
