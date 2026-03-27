@@ -132,8 +132,29 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
         const dummySize = shape.reduce((a, b) => a * b, 1);
         const dummy = new ort.Tensor("float32", new Float32Array(dummySize), shape);
         const warmupOutput = await session.run({ images: dummy });
-        warmupOutput.output0?.dispose();
-        warmupOutput.output1?.dispose();
+        
+        // ── Dynamic Capability Parsing ──
+        const outputNames = session.outputNames;
+        const output0 = warmupOutput[outputNames[0]];
+        const output1 = outputNames.length > 1 ? warmupOutput[outputNames[1]] : null;
+        
+        const capabilities: ("D" | "S" | "P")[] = ["D"]; // YOLO base
+        
+        if (output0) {
+          const NUM_CHANNELS = output0.dims[1];
+          const NUM_SCORES = msg.config.classes ? msg.config.classes.length : 80;
+          const NUM_MASK_WEIGHTS = Math.max(0, NUM_CHANNELS - (4 + NUM_SCORES));
+
+          if (output1 && output1.dims.length === 4 && NUM_MASK_WEIGHTS > 0) {
+            capabilities.push("S");
+          } else if (NUM_MASK_WEIGHTS > 0) {
+            capabilities.push("P"); // Keypoints (future)
+          }
+        }
+        
+        for (const name of outputNames) {
+          warmupOutput[name]?.dispose();
+        }
         dummy.dispose();
 
         const warmUpTime = (performance.now() - start).toFixed(2);
@@ -143,6 +164,8 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
           type: "model-status",
           status: "Model loaded",
           warmUpTime,
+          capabilities,
+          modelPath: msg.modelPath,
         });
       } catch (error: unknown) {
         const errMsg = error instanceof Error ? error.message : "Unknown error";

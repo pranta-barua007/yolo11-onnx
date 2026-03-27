@@ -7,6 +7,7 @@ import {
   putModelInCache,
   getCustomModelsMetadata,
   addCustomModelMetadata,
+  updateCustomModelMetadata,
 } from "../utils/model_cache";
 import defaultClasses from "../utils/yolo_classes.json";
 import { BASE_PATH } from "../utils/paths";
@@ -77,6 +78,25 @@ export function useYoloModel() {
           setModelStatus("Model loaded");
           setIsModelLoaded(true);
           loadingRef.current = false;
+
+          // If the newly loaded model is a custom model with capabilities, persist them.
+          if (msg.capabilities && msg.modelPath && msg.modelPath.startsWith("custom:")) {
+            setCustomModels((prev) => {
+              const modelIndex = prev.findIndex((m) => m.url === msg.modelPath);
+              if (modelIndex > -1 && !prev[modelIndex].capabilities) {
+                const updated = [...prev];
+                updated[modelIndex] = { ...updated[modelIndex], capabilities: msg.capabilities };
+                updateCustomModelMetadata({
+                  name: updated[modelIndex].name,
+                  classes: updated[modelIndex].classes,
+                  cacheKey: updated[modelIndex].url,
+                  capabilities: msg.capabilities,
+                });
+                return updated;
+              }
+              return prev;
+            });
+          }
         } else if (msg.status === "webgpu-failed") {
           console.warn("[useYoloModel] WebGPU failed in worker, falling back to WASM...");
           loadingRef.current = false;

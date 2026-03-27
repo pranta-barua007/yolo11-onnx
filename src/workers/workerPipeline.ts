@@ -92,26 +92,36 @@ export async function workerInferencePipeline(
   const end = performance.now();
   input_tensor.dispose();
 
-  const output0 = output.output0;
-  const output1 = output.output1;
-  if (!output0 || !output1) {
-    output0?.dispose();
-    output1?.dispose();
+  const outputNames = session.outputNames;
+  const output0 = output[outputNames[0]];
+  const output1 = outputNames.length > 1 ? output[outputNames[1]] : null;
+
+  if (!output0) {
+    if (output1) output1.dispose();
     return { boxes: [], inferenceTime: "0", maskPixels: null, maskWidth: 0, maskHeight: 0 };
   }
 
   const NUM_PREDICTIONS = output0.dims[2];
   const activeClasses = config.classes ?? DEFAULT_CLASSES;
   const NUM_SCORES = activeClasses.length;
-  const NUM_MASK_WEIGHTS = 32;
+  const NUM_CHANNELS = output0.dims[1];
+  const NUM_MASK_WEIGHTS = Math.max(0, NUM_CHANNELS - (4 + NUM_SCORES)); // dynamically infer based on tensor (116 - 84 = 32)
+  const isSegmentation = output1 && output1.dims.length === 4 && NUM_MASK_WEIGHTS > 0;
 
   const predictionsData = output0.data as Float32Array;
-  const proto_mask = output1.data as Float32Array;
-  const MASK_CHANNELS = output1.dims[1];
-  const MASK_HEIGHT = output1.dims[2];
-  const MASK_WIDTH = output1.dims[3];
+  
+  let proto_mask: Float32Array | null = null;
+  let MASK_CHANNELS = 0, MASK_HEIGHT = 0, MASK_WIDTH = 0;
+  
+  if (isSegmentation && output1) {
+    proto_mask = output1.data as Float32Array;
+    MASK_CHANNELS = output1.dims[1];
+    MASK_HEIGHT = output1.dims[2];
+    MASK_WIDTH = output1.dims[3];
+  }
+
   output0.dispose();
-  output1.dispose();
+  if (output1) output1.dispose();
 
   const xRatio = overlayW / modelW;
   const yRatio = overlayH / modelH;
@@ -126,12 +136,17 @@ export async function workerInferencePipeline(
   const selected_indices = applyNMS(results, scoresArray, config.iou_threshold);
   const filtered = selected_indices.map((i) => results[i]);
 
-  const maskResult = generateMaskOverlay(
-    filtered, proto_mask,
-    MASK_CHANNELS, MASK_HEIGHT, MASK_WIDTH,
-    modelW, modelH, overlayW, overlayH,
-    xRatio, yRatio
-  );
+  let maskResult = null;
+  
+  // Composition: only run mask generation if we detected a valid segmentation model
+  if (isSegmentation && proto_mask) {
+    maskResult = generateMaskOverlay(
+      filtered, proto_mask,
+      MASK_CHANNELS, MASK_HEIGHT, MASK_WIDTH,
+      modelW, modelH, overlayW, overlayH,
+      xRatio, yRatio
+    );
+  }
 
   const outputBoxes: WorkerBox[] = filtered.map((r) => ({
     bbox: r.bbox,
