@@ -64,19 +64,19 @@ export default function MediaArea() {
 
             {/* Overlay canvas */}
             <canvas ref={overlayRef} className="absolute inset-0 w-full h-full pointer-events-none rounded-lg" />
-            
-            {/* Close button - Anchored to the image wrapper */}
-            <button
-              className="absolute -top-3 -right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-background border border-foreground/20 hover:bg-destructive/20 hover:border-destructive/40 text-muted-foreground hover:text-destructive transition-all duration-300 shadow-xl"
-              onClick={() => {
-                if (cameraStream) onCameraToggle();
-                if (imgSrc) onImageToggle();
-              }}
-              aria-label="Close"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
+
+          {/* Close button - Anchored to the parent container */}
+          <button
+            className="absolute top-0 right-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-destructive/5 border border-transparent hover:bg-destructive/20 hover:border-destructive/30 text-destructive/40 hover:text-destructive transition-all duration-300 pointer-events-auto backdrop-blur-sm md:top-2 md:right-2"
+            onClick={() => {
+              if (cameraStream) onCameraToggle();
+              if (imgSrc) onImageToggle();
+            }}
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
     </div>
