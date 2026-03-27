@@ -16,7 +16,7 @@ export default function MediaArea() {
 
   return (
     <div
-      className={`relative flex-1 min-h-[540px] min-h-0 overflow-hidden bg-black/20 flex items-center justify-center rounded-b-[20px] transition-opacity duration-300 ${!isModelLoaded ? "pointer-events-none opacity-60" : "opacity-100"
+      className={`relative flex-1 min-h-[540px] min-h-0 overflow-hidden bg-transparent flex items-center justify-center transition-opacity duration-300 ${!isModelLoaded ? "pointer-events-none opacity-60" : "opacity-100"
         }`}
     >
       {/* Hidden canvas used for inference */}
@@ -65,7 +65,7 @@ export default function MediaArea() {
             
             {/* Close button - Anchored to the image wrapper */}
             <button
-              className="absolute -top-3 -right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-background border border-white/20 hover:bg-destructive/20 hover:border-destructive/40 text-muted-foreground hover:text-destructive transition-all duration-300 shadow-xl"
+              className="absolute -top-3 -right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-background border border-foreground/20 hover:bg-destructive/20 hover:border-destructive/40 text-muted-foreground hover:text-destructive transition-all duration-300 shadow-xl"
               onClick={() => {
                 if (cameraStream) onCameraToggle();
                 if (imgSrc) onImageToggle();

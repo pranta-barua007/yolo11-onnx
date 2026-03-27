@@ -29,7 +29,7 @@ function DeviceSelect() {
     <div className="flex items-center gap-2">
       <Cpu className="w-3.5 h-3.5 text-muted-foreground" />
       <Select value={device} onValueChange={setDevice} defaultValue="webgpu">
-        <SelectTrigger className="h-8 w-full md:w-[120px] text-[11px] font-bold uppercase tracking-wider bg-black/20 border-white/5 rounded-full text-foreground hover:bg-white/5 transition-colors">
+        <SelectTrigger className="h-8 w-full md:w-[120px] text-[11px] font-bold uppercase tracking-wider bg-background border-border/40 rounded-full text-foreground hover:bg-muted/50 transition-colors">
           <div className="flex items-center gap-2">
             <div
               className={`w-2 h-2 rounded-full transition-all duration-500 ${isModelLoaded
@@ -61,7 +61,7 @@ function ModelSelect() {
     <div className="flex items-center gap-2">
       <Package className="w-3.5 h-3.5 text-muted-foreground" />
       <Select value={modelName} onValueChange={setModelName} defaultValue="yolo11n-seg">
-        <SelectTrigger className="h-8 w-full md:min-w-[140px] text-[11px] font-bold text-foreground bg-black/20 border-white/5 font-mono rounded-full hover:bg-white/5 transition-colors">
+        <SelectTrigger className="h-8 w-full md:min-w-[140px] text-[11px] font-bold text-foreground bg-background border-border/40 font-mono rounded-full hover:bg-muted/50 transition-colors">
           <SelectValue placeholder="Select Model" />
         </SelectTrigger>
         <SelectContent className="bg-background/95 backdrop-blur-xl border-border/50">
@@ -72,14 +72,14 @@ function ModelSelect() {
               {model.name}
             </SelectItem>
           ))}
-          <div className="p-2 border-t border-white/10 mt-1">
+          <div className="p-2 border-t border-foreground/10 mt-1">
             <button
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 setDialogOpen(true);
               }}
-              className="w-full text-[10px] font-bold uppercase tracking-wider py-1.5 px-2 bg-white/5 hover:bg-primary/20 text-muted-foreground hover:text-primary rounded transition-all duration-300"
+              className="w-full text-[10px] font-bold uppercase tracking-wider py-1.5 px-2 hover:bg-accent text-muted-foreground hover:text-accent-foreground rounded transition-all duration-300"
             >
               + Add Custom Model
             </button>
@@ -106,7 +106,7 @@ function CameraSelect() {
     <div className="flex items-center gap-2">
       <Video className="w-3.5 h-3.5 text-muted-foreground" />
       <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
-        <SelectTrigger className="h-8 w-full md:w-[160px] text-[11px] font-medium text-foreground bg-black/20 border-white/5 rounded-full hover:bg-white/5 transition-colors">
+        <SelectTrigger className="h-8 w-full md:w-[160px] text-[11px] font-medium text-foreground bg-background border-border/40 rounded-full hover:bg-muted/50 transition-colors">
           <SelectValue placeholder="Select Camera" />
         </SelectTrigger>
         <SelectContent className="bg-background/95 backdrop-blur-xl border-border/50">
@@ -133,7 +133,7 @@ function ConfidenceSlider() {
   const isInferring = !!cameraStream || !!imgSrc;
 
   return (
-    <div className={`flex items-center gap-2 px-3 h-8 bg-black/20 border border-white/5 rounded-full transition-opacity ${isInferring ? "opacity-50 pointer-events-none" : ""}`}>
+    <div className={`flex items-center gap-2 px-3 h-8 bg-background border border-border/40 rounded-full transition-opacity ${isInferring ? "opacity-50 pointer-events-none" : ""}`}>
       <Gauge className="w-3.5 h-3.5 text-muted-foreground" />
       <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Conf.</span>
       <input
@@ -170,16 +170,16 @@ function PerformanceMetrics() {
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <div className="flex items-center gap-1 text-[11px]">
             <span className="font-medium text-muted-foreground">FPS</span>
-            <span className="font-bold text-fuchsia-400 drop-shadow-[0_0_5px_rgba(232,121,249,0.5)]">
+            <span className="font-bold text-fuchsia-400">
               {fps > 0 ? fps : "--"}
             </span>
           </div>
-          <div className="w-px h-3 bg-white/10" />
+          <div className="w-px h-3 bg-foreground/10" />
           <div className="flex items-center gap-1 text-[11px]">
             <span className="font-medium text-muted-foreground">Inf.</span>
-            <span className="font-bold text-primary drop-shadow-[0_0_5px_rgba(168,85,247,0.5)]">{inferenceTime}ms</span>
+            <span className="font-bold text-primary">{inferenceTime}ms</span>
           </div>
-          <div className="w-px h-3 bg-white/10" />
+          <div className="w-px h-3 bg-foreground/10" />
           <div className="flex items-center gap-1 text-[11px]">
             <span className="font-medium text-muted-foreground hidden sm:inline">Warmup</span>
             <span className="font-medium text-muted-foreground sm:hidden" title="Warmup">W.</span>
@@ -187,15 +187,15 @@ function PerformanceMetrics() {
           </div>
           
           <div className="ml-auto flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 inline-block" />
               <span className="hidden sm:inline">Ready</span>
             </span>
             <button
               onClick={reloadModel}
               disabled={!!cameraStream}
               title="Re-download model (clear cache)"
-              className="p-1 rounded-md hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
@@ -209,11 +209,11 @@ function PerformanceMetrics() {
 const StatusBarSkeleton = (
   <div className="w-full flex items-center justify-between animate-pulse px-4 py-3">
     <div className="flex gap-4">
-      <div className="h-8 w-24 bg-white/5 rounded-full" />
-      <div className="h-8 w-32 bg-white/5 rounded-full hidden md:block" />
-      <div className="h-8 w-40 bg-white/5 rounded-full hidden md:block" />
+      <div className="h-8 w-24 bg-foreground/5 rounded-full" />
+      <div className="h-8 w-32 bg-foreground/5 rounded-full hidden md:block" />
+      <div className="h-8 w-40 bg-foreground/5 rounded-full hidden md:block" />
     </div>
-    <div className="h-8 w-32 bg-white/5 rounded-full" />
+    <div className="h-8 w-32 bg-foreground/5 rounded-full" />
   </div>
 );
 
@@ -222,7 +222,7 @@ export default function StatusBar() {
   const [showSettings, setShowSettings] = useState(false);
 
   return (
-    <div className="flex-none glass-panel border-t-0 border-x-0 sm:border-t sm:border-x border-white/5 px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 min-h-[64px] rounded-t-[20px]">
+    <div className="flex-none bg-transparent border-b border-border/40 px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 min-h-[64px]">
       {mounted ? (
         <>
           <div className={`flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-4 transition-all duration-300 ${!showSettings ? 'hidden md:flex' : 'flex'}`}>
@@ -236,7 +236,7 @@ export default function StatusBar() {
           <div className="md:hidden flex items-center justify-between gap-4 mt-1">
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 text-muted-foreground font-medium text-[10px] uppercase tracking-wider transition-all hover:bg-white/10 hover:text-foreground"
+              className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-lg border border-border/50 text-muted-foreground font-medium text-[10px] uppercase tracking-wider transition-all hover:bg-muted hover:text-foreground"
             >
               <Sliders className="w-3 h-3 text-muted-foreground" />
               {showSettings ? "Hide Options" : "Show Options"}
