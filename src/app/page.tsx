@@ -63,6 +63,7 @@ export default function Home() {
   } = useImageProcessing();
 
   const [selectedDetectionIdx, setSelectedDetectionIdx] = useState<number | null>(null);
+  const [selectedKeypointIdx, setSelectedKeypointIdx] = useState<number | null>(null);
 
   const handleImageLoad = () => {
     fpsReset();
@@ -86,7 +87,13 @@ export default function Home() {
 
   const handleSelectDetection = (idx: number | null) => {
     setSelectedDetectionIdx(idx);
-    redrawOverlay(details, idx);
+    setSelectedKeypointIdx(null); // Reset keypoint when changing detection
+    redrawOverlay(details, idx, null);
+  };
+
+  const handleSelectKeypoint = (kpIdx: number | null) => {
+    setSelectedKeypointIdx(kpIdx);
+    redrawOverlay(details, selectedDetectionIdx, kpIdx);
   };
 
   // Cleanup camera stream and processing when component unmounts
@@ -119,6 +126,8 @@ export default function Home() {
             details={details}
             selectedDetectionIdx={selectedDetectionIdx}
             onSelectDetection={handleSelectDetection}
+            selectedKeypointIdx={selectedKeypointIdx}
+            onSelectKeypoint={handleSelectKeypoint}
             onSave={saveResult}
             classes={activeClasses}
           />

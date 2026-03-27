@@ -19,7 +19,8 @@ export async function draw_bounding_boxes(
   predictions: Array<{ bbox: number[]; class_idx: number; score: number; keypoints?: {x:number, y:number, score:number}[] }>,
   overlay_el: HTMLCanvasElement,
   filterIndex: number | null = null,
-  classes: string[] = defaultClasses
+  classes: string[] = defaultClasses,
+  selectedKeypointIdx: number | null = null
 ): Promise<void> {
   const ctx = overlay_el.getContext("2d");
   if (!ctx) return;
@@ -80,12 +81,24 @@ export async function draw_bounding_boxes(
       });
 
       // Draw keypoint dots
-      predict.keypoints.forEach((kp) => {
+      predict.keypoints.forEach((kp, kpIdx) => {
         if (kp.score > 0.5) {
-          ctx.fillStyle = "rgba(255, 0, 0, 1.0)"; // Red dots
-          ctx.beginPath();
-          ctx.arc(kp.x, kp.y, lineWidth * 1.5, 0, 2 * Math.PI);
-          ctx.fill();
+          const isSelectedKeypoint = !isFiltered && selectedKeypointIdx === kpIdx;
+          
+          if (isSelectedKeypoint) {
+            ctx.fillStyle = "rgba(255, 255, 255, 1.0)"; // White highlight
+            ctx.beginPath();
+            ctx.arc(kp.x, kp.y, lineWidth * 3, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(255, 0, 0, 1.0)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = "rgba(255, 0, 0, 1.0)"; // Red dots
+            ctx.beginPath();
+            ctx.arc(kp.x, kp.y, lineWidth * 1.5, 0, 2 * Math.PI);
+            ctx.fill();
+          }
         }
       });
     }
