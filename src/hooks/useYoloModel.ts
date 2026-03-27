@@ -9,6 +9,7 @@ import {
   addCustomModelMetadata,
 } from "../utils/model_cache";
 import defaultClasses from "../utils/yolo_classes.json";
+import { BASE_PATH } from "../utils/paths";
 
 const input_shape = [1, 3, 640, 640];
 const iou_threshold = 0.25;
@@ -101,7 +102,7 @@ export function useYoloModel() {
   /** Resolve model path — built-in uses /models/ URL, custom uses cache key directly. */
   const resolveModelPath = useCallback((name: string): string => {
     const customModel = customModels.find((m) => m.url === name);
-    return customModel ? customModel.url : `/models/${name}.onnx`;
+    return customModel ? customModel.url : `${BASE_PATH}/models/${name}.onnx`;
   }, [customModels]);
 
   /** Load model in worker only */

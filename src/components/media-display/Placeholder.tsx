@@ -4,11 +4,13 @@ import { Image as ImageIcon, Camera } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useMediaDisplay } from "./MediaDisplayContext";
 
+import { BASE_PATH } from "@/utils/paths";
+
 const EXAMPLE_IMAGES = [
-  '/ex1.jpg',
-  '/ex2.jpg',
-  '/ex3.jpg',
-  '/ex4.jpg',
+  `${BASE_PATH}/ex1.jpg`,
+  `${BASE_PATH}/ex2.jpg`,
+  `${BASE_PATH}/ex3.jpg`,
+  `${BASE_PATH}/ex4.jpg`,
 ];
 
 export default function Placeholder() {
