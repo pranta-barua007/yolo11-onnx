@@ -35,7 +35,7 @@ export default function MediaArea() {
 
       {/* Media Wrapper for correct overlay alignment */}
       {hasMedia && (
-        <div className="absolute inset-4 md:inset-6 flex justify-center items-center pointer-events-none overflow-hidden">
+        <div className="absolute inset-4 md:inset-6 flex justify-center items-center pointer-events-none">
           <div className="relative inline-block pointer-events-auto leading-none">
             {/* Video for camera feed */}
             <video
