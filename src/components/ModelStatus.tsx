@@ -168,11 +168,11 @@ export default function ModelStatus({
                           `}
                         >
                           <span className={`text-xs ${isSelected ? "text-primary font-bold" : "text-foreground"} flex items-center gap-2`}>
-                            <div className={`w-1.5 h-1.5 rounded-full ${isHighConf ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" : "bg-muted-foreground/30"}`} />
+                            <div className={`w-1.5 h-1.5 rounded-full ${isHighConf ? "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.5)]" : "bg-muted-foreground/30"}`} />
                             {COCO_KEYPOINTS[kpIdx]}
                           </span>
                           <span className={`text-[10px] tabular-nums ${isHighConf ? "text-muted-foreground" : "text-muted-foreground/40 font-normal italic"}`}>
-                            {kp ? `${(kp.score * 100).toPrecision(2)}%` : "N/A"}
+                            {kp ? `${Math.round(kp.score * 100)}%` : "N/A"}
                           </span>
                         </div>
                       );

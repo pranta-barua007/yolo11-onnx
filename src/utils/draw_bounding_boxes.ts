@@ -80,13 +80,13 @@ export async function draw_bounding_boxes(
         }
       });
 
-      // Draw keypoint dots
+      // Draw keypoint dots with group-specific colors
       predict.keypoints.forEach((kp, kpIdx) => {
         if (kp.score > 0.5) {
           const isSelectedKeypoint = !isFiltered && selectedKeypointIdx === kpIdx;
           
           if (isSelectedKeypoint) {
-            ctx.fillStyle = "rgba(255, 255, 255, 1.0)"; // White highlight
+            ctx.fillStyle = "rgba(255, 255, 255, 1.0)"; // Pure white highlight
             ctx.beginPath();
             ctx.arc(kp.x, kp.y, lineWidth * 3, 0, 2 * Math.PI);
             ctx.fill();
@@ -94,7 +94,11 @@ export async function draw_bounding_boxes(
             ctx.lineWidth = 2;
             ctx.stroke();
           } else {
-            ctx.fillStyle = "rgba(255, 0, 0, 1.0)"; // Red dots
+            // Category-based colors (Face: Blue, Arms: Green, Legs: Yellow)
+            if (kpIdx <= 4) ctx.fillStyle = "rgba(59, 130, 246, 1.0)";      // Face: Blue-500
+            else if (kpIdx <= 10) ctx.fillStyle = "rgba(16, 185, 129, 1.0)"; // Arms: Emerald-500
+            else ctx.fillStyle = "rgba(245, 158, 11, 1.0)";           // Legs: Amber-500
+
             ctx.beginPath();
             ctx.arc(kp.x, kp.y, lineWidth * 1.5, 0, 2 * Math.PI);
             ctx.fill();
