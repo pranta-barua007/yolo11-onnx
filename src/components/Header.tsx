@@ -17,11 +17,16 @@ export default function Header({ rightSlot }: HeaderProps) {
             <div className="flex items-center justify-between max-w-[1600px] mx-auto w-full">
                 <div className="flex items-center gap-4">
                     {/* Brand */}
-                    <Link href="/" className="flex items-center gap-3 group">
-                        <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 via-purple-500 to-fuchsia-500 rounded-[10px] flex items-center justify-center text-white font-bold text-xl shadow-lg ring-1 ring-foreground/20 transition-transform duration-300 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(168,85,247,0.4)]">D</div>
-                        <span className="hidden sm:flex text-lg md:text-xl font-bold text-foreground tracking-tight items-baseline">
-                            YOLO <span className="text-gradient ml-1.5 font-extrabold animate-gradient">Real-time</span>
-                            <span className="text-muted-foreground font-medium text-xs md:text-sm ml-3 hidden lg:inline border-l border-border/50 pl-3">Segmentation App</span>
+                    <Link href="/" className="flex items-center gap-3 active:scale-95 transition-transform duration-200">
+                        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-black text-2xl shadow-sm ring-1 ring-primary/20">
+                            D
+                        </div>
+                        <span className="hidden sm:flex text-lg font-bold text-foreground tracking-tight items-baseline">
+                            YOLO
+                            <span className="text-primary ml-1.5 font-bold">Real-time</span>
+                            <span className="text-muted-foreground font-medium text-xs ml-3 hidden lg:inline border-l border-border/50 pl-3">
+                                Segmentation App
+                            </span>
                         </span>
                     </Link>
 
