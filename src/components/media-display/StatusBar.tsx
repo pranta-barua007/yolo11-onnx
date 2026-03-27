@@ -13,13 +13,27 @@ import {
 import { useMediaDisplay } from "./MediaDisplayContext";
 import AddModelDialog from "../AddModelDialog";
 
-/** SSR-safe mount detection without useEffect + setState (fixes react-hooks/set-state-in-effect) */
-const emptySubscribe = () => () => { };
-function useIsMounted() {
-  return useSyncExternalStore(
-    emptySubscribe,
-    () => true,  // client: always mounted
-    () => false  // server: never mounted
+function CapabilityBadges({ capabilities = [] }: { capabilities?: ("D" | "S" | "P")[] }) {
+  if (!capabilities.length) return null;
+  
+  const colors = {
+    D: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+    S: "text-blue-500 bg-blue-500/10 border-blue-500/20",
+    P: "text-purple-500 bg-purple-500/10 border-purple-500/20"
+  };
+
+  return (
+    <div className="flex items-center gap-1 ml-1.5 shrink-0">
+      {capabilities.map(cap => (
+        <span 
+          key={cap} 
+          className={`px-1 rounded-[4px] border text-[9px] font-bold leading-none py-[2px] ${colors[cap]}`}
+          title={cap === 'D' ? 'Detection' : cap === 'S' ? 'Segmentation' : 'Pose'}
+        >
+          {cap}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -65,11 +79,24 @@ function ModelSelect() {
           <SelectValue placeholder="Select Model" />
         </SelectTrigger>
         <SelectContent className="bg-background/95 backdrop-blur-xl border-border/50">
-          <SelectItem value="yolo11n-seg" className="text-xs font-mono focus:bg-primary/20">High Speed</SelectItem>
-          <SelectItem value="yolo11s-seg" className="text-xs font-mono focus:bg-primary/20">High Accuracy</SelectItem>
+          <SelectItem value="yolo11n-seg" className="text-xs font-mono focus:bg-primary/20">
+            <div className="flex items-center justify-between w-full gap-2">
+              <span>High Speed</span>
+              <CapabilityBadges capabilities={["D", "S"]} />
+            </div>
+          </SelectItem>
+          <SelectItem value="yolo11s-seg" className="text-xs font-mono focus:bg-primary/20">
+            <div className="flex items-center justify-between w-full gap-2">
+              <span>High Accuracy</span>
+              <CapabilityBadges capabilities={["D", "S"]} />
+            </div>
+          </SelectItem>
           {customModels.filter(model => model.url).map((model) => (
             <SelectItem key={model.url} value={model.url} className="text-xs font-mono focus:bg-primary/20">
-              {model.name}
+              <div className="flex items-center justify-between w-full gap-2">
+                <span className="truncate">{model.name}</span>
+                <CapabilityBadges capabilities={model.capabilities} />
+              </div>
             </SelectItem>
           ))}
           <div className="p-2 border-t border-foreground/10 mt-1">
@@ -216,6 +243,16 @@ const StatusBarSkeleton = (
     <div className="h-8 w-32 bg-foreground/5 rounded-full opacity-60" />
   </div>
 );
+
+/** SSR-safe mount detection without useEffect + setState (fixes react-hooks/set-state-in-effect) */
+const emptySubscribe = () => () => { };
+function useIsMounted() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,  // client: always mounted
+    () => false  // server: never mounted
+  );
+}
 
 export default function StatusBar() {
   const mounted = useIsMounted();
