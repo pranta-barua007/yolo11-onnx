@@ -54,10 +54,20 @@ export function useYoloModel() {
   // Active classes for the currently selected model
   const activeClasses = (() => {
     const customModel = customModels.find((m) => m.url === modelName);
-    return customModel ? customModel.classes : defaultClasses;
+    if (customModel) return customModel.classes;
+    if (modelName.includes("pose")) return ["person"];
+    return defaultClasses;
   })();
 
-  const config = { input_shape, iou_threshold, score_threshold: scoreThreshold, classes: activeClasses };
+  const activeCapabilities = (() => {
+    const customModel = customModels.find((m) => m.url === modelName);
+    if (customModel) return customModel.capabilities;
+    if (modelName.includes("pose")) return ["D", "P"] as ("D" | "S" | "P")[];
+    if (modelName.includes("seg")) return ["D", "S"] as ("D" | "S" | "P")[];
+    return ["D"] as ("D" | "S" | "P")[];
+  })();
+
+  const config = { input_shape, iou_threshold, score_threshold: scoreThreshold, classes: activeClasses, capabilities: activeCapabilities };
 
   // Track whether a load is already in-flight
   const loadingRef = useRef<boolean>(false);

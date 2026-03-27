@@ -81,14 +81,14 @@ function ModelSelect() {
         <SelectContent className="bg-background/95 backdrop-blur-xl border-border/50">
           <SelectItem value="yolo11n-seg" className="text-xs font-mono focus:bg-primary/20">
             <div className="flex items-center justify-between w-full gap-2">
-              <span>High Speed</span>
+              <span>YOLO11 Nano</span>
               <CapabilityBadges capabilities={["D", "S"]} />
             </div>
           </SelectItem>
-          <SelectItem value="yolo11s-seg" className="text-xs font-mono focus:bg-primary/20">
+          <SelectItem value="yolo11n-pose" className="text-xs font-mono focus:bg-primary/20">
             <div className="flex items-center justify-between w-full gap-2">
-              <span>High Accuracy</span>
-              <CapabilityBadges capabilities={["D", "S"]} />
+              <span>YOLO11 Nano Pose</span>
+              <CapabilityBadges capabilities={["D", "P"]} />
             </div>
           </SelectItem>
           {customModels.filter(model => model.url).map((model) => (
