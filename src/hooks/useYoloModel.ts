@@ -8,7 +8,6 @@ import {
   deleteModelFromCache,
   getCustomModelsMetadata,
   addCustomModelMetadata,
-  updateCustomModelMetadata,
   removeCustomModelMetadata,
 } from "../utils/model_cache";
 import defaultClasses from "../utils/yolo_classes.json";
