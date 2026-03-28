@@ -13,13 +13,26 @@ import {
 import { useMediaDisplay } from "./MediaDisplayContext";
 import AddModelDialog from "../AddModelDialog";
 
-function CapabilityBadges({ capabilities = [] }: { capabilities?: ("D" | "S" | "P")[] }) {
+function CapabilityBadges({ capabilities = [] }: { capabilities?: ("D" | "S" | "P" | "Q" | "I8")[] }) {
   if (!capabilities.length) return null;
   
   const colors = {
     D: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
     S: "text-blue-500 bg-blue-500/10 border-blue-500/20",
-    P: "text-purple-500 bg-purple-500/10 border-purple-500/20"
+    P: "text-purple-500 bg-purple-500/10 border-purple-500/20",
+    Q: "text-amber-500 bg-amber-500/10 border-amber-500/20",
+    I8: "text-orange-600 bg-orange-600/10 border-orange-600/20"
+  };
+
+  const getTitle = (cap: string) => {
+    switch(cap) {
+      case 'D': return 'Detection';
+      case 'S': return 'Segmentation';
+      case 'P': return 'Pose';
+      case 'Q': return 'Quantized (FP16)';
+      case 'I8': return 'Quantized (INT8)';
+      default: return cap;
+    }
   };
 
   return (
@@ -27,8 +40,8 @@ function CapabilityBadges({ capabilities = [] }: { capabilities?: ("D" | "S" | "
       {capabilities.map(cap => (
         <span 
           key={cap} 
-          className={`px-1 rounded-[4px] border text-[9px] font-bold leading-none py-[2px] ${colors[cap]}`}
-          title={cap === 'D' ? 'Detection' : cap === 'S' ? 'Segmentation' : 'Pose'}
+          className={`px-1 rounded-[4px] border text-[9px] font-bold leading-none py-[2px] ${colors[cap as keyof typeof colors]}`}
+          title={getTitle(cap)}
         >
           {cap}
         </span>
@@ -89,6 +102,12 @@ function ModelSelect() {
             <div className="flex items-center justify-between w-full gap-2">
               <span>YOLO11 Nano Pose</span>
               <CapabilityBadges capabilities={["D", "P"]} />
+            </div>
+          </SelectItem>
+          <SelectItem value="yolo11s" className="text-xs font-mono focus:bg-primary/20">
+            <div className="flex items-center justify-between w-full gap-2">
+              <span>YOLO11 Small</span>
+              <CapabilityBadges capabilities={["D", "Q"]} />
             </div>
           </SelectItem>
           {customModels.filter(model => model.url).map((model) => (
