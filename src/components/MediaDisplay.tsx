@@ -92,7 +92,7 @@ export default function MediaDisplay(props: MediaDisplayProps) {
 
   return (
     <MediaDisplayProvider value={contextValue}>
-      <Card className="w-full h-full flex flex-col border-border/40 shadow-sm bg-card rounded-2xl overflow-hidden">
+      <Card className="w-full h-full flex flex-col border-border/40 shadow-sm bg-card rounded-xl md:rounded-2xl overflow-hidden">
         <StatusBar />
         <MediaArea />
       </Card>
