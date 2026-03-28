@@ -370,53 +370,57 @@ model.export(format="onnx", opset=12, dynamic=False, nms=False)`}</pre>
                                 </div>
                             </div>
 
-                            {/* FP16 Export */}
+                            {/* FP16 Export — correct method */}
                             <div className="space-y-2 mt-4">
-                                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">Half-Precision Export (FP16) — Recommended</h4>
+                                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">WebGPU-Safe Half-Precision (FP16) — Recommended</h4>
                                 <p className="text-xs">
                                     Reduces model size by 50% with faster inference on WebGPU hardware.
                                 </p>
+
+                                <Card className="border-red-500/20 bg-red-500/5 p-4 space-y-1.5 mt-2">
+                                    <p className="text-xs font-semibold text-red-600 dark:text-red-400">
+                                        Do NOT use <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">half=True</code> directly
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Ultralytics&apos; <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">half=True</code> blindly
+                                        converts all ops to float16, including <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">Resize</code> which
+                                        WebGPU doesn&apos;t support. This causes <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">Invalid data type</code> runtime errors.
+                                    </p>
+                                </Card>
+
+                                <p className="text-xs font-medium text-foreground mt-3">Step 1 — Export as FP32:</p>
                                 <div className="bg-muted/50 rounded-xl p-4 font-mono text-xs overflow-x-auto border border-border/40">
                                     <pre className="text-foreground">{`from ultralytics import YOLO
 
 model = YOLO("yolo11s.pt")
-# opset 12 is required for maximum browser compatibility
-model.export(format="onnx", opset=12, half=True, nms=False)`}</pre>
+model.export(format="onnx", opset=12, dynamic=False, nms=False)`}</pre>
                                 </div>
-                            </div>
 
-                            {/* WebGPU Sanitization */}
-                            <Card className="border-amber-500/20 bg-amber-500/5 p-5 space-y-3 mt-4">
-                                <h4 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-                                    WebGPU Sanitization (Required for FP16)
-                                </h4>
-                                <p className="text-xs">
-                                    ONNX Runtime WebGPU has strict data type requirements.
-                                    FP16 exports often contain internal nodes (<code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">Resize</code>,{" "}
-                                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">Cast</code>) with incompatible <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">INT64</code> types.
-                                    Run this script <strong>before uploading</strong>:
+                                <p className="text-xs font-medium text-foreground mt-3">Step 2 — Convert to FP16 with op blocking:</p>
+                                <p className="text-xs text-muted-foreground">
+                                    ONNX Runtime&apos;s converter keeps incompatible ops (like <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">Resize</code>)
+                                    in FP32 and inserts Cast nodes automatically.
                                 </p>
-                                <div className="bg-background rounded-xl p-4 font-mono text-[11px] overflow-x-auto border border-border/40">
+                                <div className="bg-muted/50 rounded-xl p-4 font-mono text-xs overflow-x-auto border border-border/40">
                                     <pre className="text-foreground">{`import onnx
-from onnxsim import simplify  # pip install onnx-simplifier
+from onnxruntime.transformers.float16 import convert_float_to_float16
 
-def sanitize_for_webgpu(model_path, output_path):
-    model = onnx.load(model_path)
-    model_simp, check = simplify(model)
+model = onnx.load("yolo11s.onnx")
 
-    # Fix INT64 Cast nodes → INT32
-    for node in model_simp.graph.node:
-        if node.op_type == "Cast":
-            for attr in node.attribute:
-                if attr.name == "to" and attr.i == 7:
-                    attr.i = 6  # INT64 → INT32
+model_fp16 = convert_float_to_float16(
+    model,
+    keep_io_types=True,
+    op_block_list=["Resize", "GridSample"]
+)
 
-    onnx.save(model_simp, output_path)
-    print(f"✅ WebGPU Ready: {output_path}")
-
-sanitize_for_webgpu("yolo11s.onnx", "yolo11s_fixed.onnx")`}</pre>
+onnx.save(model_fp16, "yolo11s_webgpu.onnx")
+print("✅ WebGPU-safe FP16 model saved")`}</pre>
                                 </div>
-                            </Card>
+
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    Install: <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">pip install onnx onnxruntime</code>
+                                </p>
+                            </div>
 
                             <div className="flex flex-wrap gap-3 mt-3">
                                 <a

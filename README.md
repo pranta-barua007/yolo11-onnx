@@ -6,7 +6,7 @@ A high-performance, edge-native inference engine for YOLO11, optimized for **Web
 
 To deploy your YOLO11 model to the edge with maximum performance, follow these export guidelines in your Google Colab or Local environment.
 
-### 1. Standard Export
+### 1. Standard Export (FP32)
 For standard FP32 models (Higher accuracy, higher memory usage):
 ```python
 from ultralytics import YOLO
@@ -15,47 +15,40 @@ model = YOLO("yolo11s.pt")
 model.export(format="onnx", opset=12, dynamic=False, nms=False)
 ```
 
-### 2. Half-Precision (FP16) Export
-Recommended for WebGPU. Reduces model size by 50% with massive inference speedups on supported hardware.
+### 2. WebGPU-Safe Half-Precision (FP16) Export
+
+Recommended for WebGPU. Reduces model size by 50% with faster inference on supported hardware.
+
+> ⚠️ **Do NOT use `half=True` directly** — Ultralytics' `half=True` blindly converts all ops to float16, including `Resize` which WebGPU doesn't support. This causes `Invalid data type` errors at runtime.
+
+**Step 1** — Export as FP32 first:
 ```python
 from ultralytics import YOLO
 
 model = YOLO("yolo11s.pt")
-# opset 12 is required for maximum browser compatibility
-model.export(format="onnx", opset=12, half=True, nms=False)
+model.export(format="onnx", opset=12, dynamic=False, nms=False)
 ```
 
----
-
-## ⚡ WebGPU Sanitization (Crucial)
-
-ONNX Runtime WebGPU has strict requirements for **Half-Precision** models. Standard exports often contain internal nodes (like `Resize` or `Cast`) that use incompatible data types (`INT64` or mismatched `FP32` constants).
-
-**Before uploading to the app**, run this sanitization script to ensure the model structure is WebGPU-compliant:
-
+**Step 2** — Convert to FP16 using ONNX Runtime's converter, which keeps incompatible ops (like `Resize`) in FP32 automatically:
 ```python
 import onnx
-from onnx import helper
+from onnxruntime.transformers.float16 import convert_float_to_float16
 
-def sanitize_for_webgpu(model_path, output_path):
-    # Load the model and simplify it (Removes redundant INT64 layers)
-    # !pip install onnx-simplifier
-    from onnxsim import simplify
-    
-    model = onnx.load(model_path)
-    model_simp, check = simplify(model)
-    
-    # Fix Resize nodes and Cast operations
-    for node in model_simp.graph.node:
-        if node.op_type == "Cast":
-            for attr in node.attribute:
-                if attr.name == "to" and attr.i == 7:  # INT64
-                    attr.i = 6 # Convert to INT32
-                    
-    onnx.save(model_simp, output_path)
-    print(f"✅ WebGPU Ready: {output_path}")
+model = onnx.load("yolo11s.onnx")
 
-sanitize_for_webgpu("yolo11s.onnx", "yolo11s_fixed.onnx")
+model_fp16 = convert_float_to_float16(
+    model,
+    keep_io_types=True,
+    op_block_list=["Resize", "GridSample"]  # These ops don't support float16 on WebGPU
+)
+
+onnx.save(model_fp16, "yolo11s_webgpu.onnx")
+print("✅ WebGPU-safe FP16 model saved")
+```
+
+**Install dependencies:**
+```bash
+pip install onnx onnxruntime
 ```
 
 ---
@@ -79,4 +72,3 @@ pnpm dev
 - **Worker-Based Inference**: 100% Non-blocking UI using dedicated Web Workers for preprocessing and ONNX execution.
 - **Dynamic Masking**: Hybrid CPU/GPU mask generation for Instance Segmentation.
 - **Capability Aware**: Auto-tags models with `Q` (Quantized) or `I8` (Int8) indicators.
-
