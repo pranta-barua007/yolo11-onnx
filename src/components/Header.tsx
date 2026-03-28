@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Info } from "lucide-react";
+import { Info, BookOpen } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 
 export default function Header() {
@@ -46,6 +46,16 @@ export default function Header() {
                         >
                             <Info className="w-4 h-4" aria-hidden="true" />
                             About
+                        </Link>
+                        <Link
+                            href="/guide"
+                            className={`px-4 py-2 text-sm font-medium rounded-full transition-colors duration-200 flex items-center gap-2 ${pathname === "/guide"
+                                ? "bg-primary/10 text-primary ring-1 ring-primary/30"
+                                : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
+                                }`}
+                        >
+                            <BookOpen className="w-4 h-4" aria-hidden="true" />
+                            Guide
                         </Link>
                     </nav>
                 </div>
