@@ -57,13 +57,28 @@ export function useCamera() {
           stream.getTracks().forEach(track => track.stop());
           devices = await navigator.mediaDevices.enumerateDevices();
           videoDevices = devices.filter((device) => device.kind === "videoinput");
-        } catch (err) {
-          console.warn("[useCamera] Permission denied or no camera found:", err);
+        } catch (err: unknown) {
+          // Suppress 'NotReadableError' during poke (camera busy) 
+          // and 'NotAllowedError' (user just denied, we'll keep the placeholder)
+          if (err instanceof Error) {
+            if (err.name !== 'NotReadableError' && err.name !== 'NotAllowedError') {
+              console.warn("[useCamera] Hardware scan hint:", err.name);
+            }
+          }
         }
       }
 
       setCameras(videoDevices);
-      if (videoDevices.length > 0 && !selectedDeviceId) {
+      
+      // If selectedDeviceId is stale (no longer in current list), clear it so placeholder shows
+      const isStale = selectedDeviceId && !videoDevices.some(d => d.deviceId === selectedDeviceId);
+      if (isStale) {
+        setSelectedDeviceId("");
+      }
+
+      // Only auto-select if labels are available (implies permission granted)
+      const hasLabels = videoDevices.length > 0 && videoDevices.every(d => !!d.label);
+      if (hasLabels && (!selectedDeviceId || isStale)) {
         setSelectedDeviceId(videoDevices[0].deviceId);
       }
     } catch (error) {
