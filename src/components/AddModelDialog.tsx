@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, FileJson, X, Plus, AlertCircle, CheckCircle2 } from "lucide-react";
 import { CustomModel } from "@/utils/types";
 
@@ -131,7 +131,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
     try {
       // Read file as ArrayBuffer for caching
       const buffer = await modelFile.arrayBuffer();
-      
+
       // Perform non-blocking structural validation via Web Worker
       const capabilities = await new Promise<("D" | "S" | "P")[]>((resolve, reject) => {
         const worker = new Worker(new URL("../workers/validationWorker.ts", import.meta.url), { type: "module" });
@@ -181,9 +181,9 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
         onOpenChange(val);
       }}
     >
-      <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto border-border/50 bg-background/95 backdrop-blur-xl shadow-2xl">
+      <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto border-border/50 bg-popover rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold text-foreground">Add Custom Model</DialogTitle>
+          <DialogTitle className="text-lg font-semibold text-foreground">Add Custom Model</DialogTitle>
           <DialogDescription className="text-muted-foreground text-sm">
             Upload an ONNX model and define its classes.
           </DialogDescription>
@@ -211,7 +211,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
           ) : (
             <button
               onClick={() => modelInputRef.current?.click()}
-              className="w-full p-6 border-2 border-dashed border-border/50 rounded-lg hover:border-primary/50 hover:bg-foreground/5 transition-all flex flex-col items-center gap-2 group"
+              className="w-full p-6 border-2 border-dashed border-border rounded-lg hover:border-primary/50 hover:bg-muted/30 transition-all flex flex-col items-center gap-2 group"
             >
               <Upload className="w-8 h-8 text-muted-foreground group-hover:text-foreground transition-colors" />
               <span className="text-sm text-muted-foreground font-medium">Click to upload .onnx model</span>
@@ -231,36 +231,33 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
           <Label className="font-semibold text-sm text-foreground">Model Classes</Label>
 
           {/* Mode Toggle */}
-          <div className="flex gap-1 p-1 bg-black/5 dark:bg-black/20 border border-foreground/5 rounded-lg w-fit">
-            <button
-              onClick={() => { setClassMode("json"); setClassError(null); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                classMode === "json"
-                  ? "bg-foreground/10 text-foreground shadow-sm ring-1 ring-foreground/10"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <FileJson className="w-3.5 h-3.5" />
-              JSON File
-            </button>
-            <button
-              onClick={() => { setClassMode("manual"); setClassError(null); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                classMode === "manual"
-                  ? "bg-foreground/10 text-foreground shadow-sm ring-1 ring-foreground/10"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Manual Entry
-            </button>
-          </div>
+          <Tabs
+            value={classMode}
+            onValueChange={(val: string) => {
+              if (val) {
+                setClassMode(val as "json" | "manual");
+                setClassError(null);
+              }
+            }}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="json" className="flex items-center gap-2">
+                <FileJson className="w-3.5 h-3.5" />
+                JSON File
+              </TabsTrigger>
+              <TabsTrigger value="manual" className="flex items-center gap-2">
+                <Plus className="w-3.5 h-3.5" />
+                Manual Entry
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
           {classMode === "json" ? (
             <div>
               <button
                 onClick={() => classInputRef.current?.click()}
-                className="w-full p-4 border-2 border-dashed border-border/50 rounded-lg hover:border-primary/50 hover:bg-foreground/5 transition-all flex items-center gap-3"
+                className="w-full p-4 border-2 border-dashed border-border rounded-lg hover:border-primary/50 hover:bg-muted/30 transition-all flex items-center gap-3"
               >
                 <FileJson className="w-5 h-5 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Upload classes JSON</span>
@@ -282,7 +279,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
                 <Input
                   value={manualInput}
                   onChange={(e) => setManualInput(e.target.value)}
-                  placeholder='Crown, Filling, Lesion  or  ["Crown", "Filling"]'
+                  placeholder='person, bicycle, car...'
                   className="text-sm"
                   onKeyDown={(e) => { if (e.key === "Enter") handleManualParse(); }}
                 />
@@ -318,22 +315,21 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
                   {classes.length} classes found
                 </span>
               </div>
-              <div className="flex flex-wrap gap-1.5 p-3 bg-black/5 dark:bg-black/20 border border-foreground/5 rounded-lg max-h-32 overflow-y-auto">
+              <div className="flex flex-wrap gap-1.5 p-3 bg-muted/40 dark:bg-black/40 border border-border/40 rounded-lg max-h-32 overflow-y-auto">
                 {classes.map((cls, idx) => (
-                  <Badge
+                  <div
                     key={idx}
-                    variant="secondary"
-                    className="flex items-center gap-1 text-xs px-2 py-0.5 bg-foreground/10 hover:bg-foreground/20 text-foreground"
+                    className="flex items-center gap-1.5 text-xs px-2 py-1 bg-background/50 border border-border/40 rounded-md text-foreground"
                   >
                     <span className="text-[10px] text-muted-foreground font-mono">{idx}</span>
-                    {cls}
+                    <span className="font-medium">{cls}</span>
                     <button
                       onClick={() => removeClass(idx)}
                       className="ml-1 hover:text-destructive transition-colors focus:outline-none"
                     >
                       <X className="w-3 h-3" />
                     </button>
-                  </Badge>
+                  </div>
                 ))}
               </div>
             </div>
@@ -348,7 +344,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
           <Button
             onClick={handleSubmit}
             disabled={!isValid || isValidating}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[100px] shadow-[0_0_15px_rgba(168,85,247,0.3)] disabled:shadow-none transition-all duration-300"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[100px] shadow-[0_0_15px_rgba(var(--primary),0.3)] disabled:shadow-none transition-all duration-300"
           >
             {isValidating ? (
               <span className="flex items-center gap-2">
