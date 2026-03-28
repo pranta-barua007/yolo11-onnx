@@ -20,6 +20,8 @@ import {
     Eye,
     MousePointer2,
     Save,
+    FileOutput,
+    ExternalLink,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
@@ -351,7 +353,92 @@ cd yolo11-onnx`}</pre>
                             </div>
                         </Step>
 
-                        <Step step={5} icon={Layers} title="Add Your Own ONNX Model">
+                        <Step step={5} icon={FileOutput} title="Export Your Model (ONNX)">
+                            <p>
+                                Use the Ultralytics Python SDK to export your trained YOLO model to ONNX format.
+                                Run this in a Google Colab notebook or your local Python environment.
+                            </p>
+
+                            {/* Standard Export */}
+                            <div className="space-y-2 mt-3">
+                                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">Standard Export (FP32)</h4>
+                                <div className="bg-muted/50 rounded-xl p-4 font-mono text-xs overflow-x-auto border border-border/40">
+                                    <pre className="text-foreground">{`from ultralytics import YOLO
+
+model = YOLO("yolo11s.pt")
+model.export(format="onnx", opset=12, dynamic=False, nms=False)`}</pre>
+                                </div>
+                            </div>
+
+                            {/* FP16 Export */}
+                            <div className="space-y-2 mt-4">
+                                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">Half-Precision Export (FP16) — Recommended</h4>
+                                <p className="text-xs">
+                                    Reduces model size by 50% with faster inference on WebGPU hardware.
+                                </p>
+                                <div className="bg-muted/50 rounded-xl p-4 font-mono text-xs overflow-x-auto border border-border/40">
+                                    <pre className="text-foreground">{`from ultralytics import YOLO
+
+model = YOLO("yolo11s.pt")
+# opset 12 is required for maximum browser compatibility
+model.export(format="onnx", opset=12, half=True, nms=False)`}</pre>
+                                </div>
+                            </div>
+
+                            {/* WebGPU Sanitization */}
+                            <Card className="border-amber-500/20 bg-amber-500/5 p-5 space-y-3 mt-4">
+                                <h4 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                                    WebGPU Sanitization (Required for FP16)
+                                </h4>
+                                <p className="text-xs">
+                                    ONNX Runtime WebGPU has strict data type requirements.
+                                    FP16 exports often contain internal nodes (<code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">Resize</code>,{" "}
+                                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">Cast</code>) with incompatible <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">INT64</code> types.
+                                    Run this script <strong>before uploading</strong>:
+                                </p>
+                                <div className="bg-background rounded-xl p-4 font-mono text-[11px] overflow-x-auto border border-border/40">
+                                    <pre className="text-foreground">{`import onnx
+from onnxsim import simplify  # pip install onnx-simplifier
+
+def sanitize_for_webgpu(model_path, output_path):
+    model = onnx.load(model_path)
+    model_simp, check = simplify(model)
+
+    # Fix INT64 Cast nodes → INT32
+    for node in model_simp.graph.node:
+        if node.op_type == "Cast":
+            for attr in node.attribute:
+                if attr.name == "to" and attr.i == 7:
+                    attr.i = 6  # INT64 → INT32
+
+    onnx.save(model_simp, output_path)
+    print(f"✅ WebGPU Ready: {output_path}")
+
+sanitize_for_webgpu("yolo11s.onnx", "yolo11s_fixed.onnx")`}</pre>
+                                </div>
+                            </Card>
+
+                            <div className="flex flex-wrap gap-3 mt-3">
+                                <a
+                                    href="https://docs.ultralytics.com/modes/export/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-primary text-xs font-medium hover:underline underline-offset-4 decoration-primary/50"
+                                >
+                                    Ultralytics Export Docs <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                                </a>
+                                <a
+                                    href="https://docs.ultralytics.com/integrations/onnx/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-primary text-xs font-medium hover:underline underline-offset-4 decoration-primary/50"
+                                >
+                                    ONNX Integration Guide <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                                </a>
+                            </div>
+                        </Step>
+
+                        <Step step={6} icon={Layers} title="Add Your Own ONNX Model">
                             <p>
                                 Place your <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">.onnx</code> model
                                 in the <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">public/models/</code> directory.
@@ -369,7 +456,7 @@ cd yolo11-onnx`}</pre>
                             </p>
                         </Step>
 
-                        <Step step={6} icon={RefreshCcw} title="Build for Production">
+                        <Step step={7} icon={RefreshCcw} title="Build for Production">
                             <div className="bg-muted/50 rounded-xl p-4 font-mono text-xs overflow-x-auto border border-border/40">
                                 <pre className="text-foreground">{`pnpm build
 # Static output → out/ (configured for GitHub Pages)`}</pre>
@@ -381,7 +468,7 @@ cd yolo11-onnx`}</pre>
                             </p>
                         </Step>
 
-                        <Step step={7} icon={Palette} title="Customize the UI">
+                        <Step step={8} icon={Palette} title="Customize the UI">
                             <p>
                                 The design system uses <strong>Tailwind CSS</strong> with shadcn-style tokens.
                                 Theme colors are defined in <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">globals.css</code> as
@@ -393,7 +480,7 @@ cd yolo11-onnx`}</pre>
                             </p>
                         </Step>
 
-                        <Step step={8} icon={MousePointer2} title="Extend the Pipeline">
+                        <Step step={9} icon={MousePointer2} title="Extend the Pipeline">
                             <p>
                                 The inference pipeline lives in <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">src/workers/workerPipeline.ts</code>.
                                 All model loading, pre-processing, inference, and post-processing happens inside this Web Worker.
