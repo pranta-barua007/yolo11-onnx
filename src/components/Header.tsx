@@ -27,7 +27,7 @@ export default function Header() {
                     </Link>
 
                     {/* Nav Links */}
-                    <nav className="flex items-center gap-1.5 sm:gap-2 sm:ml-2">
+                    <nav className="flex items-center gap-1.5">
                         <Link
                             href="/"
                             className={`hidden sm:inline-flex px-4 py-2 text-sm font-medium rounded-full transition-colors duration-200 ${pathname === "/"
