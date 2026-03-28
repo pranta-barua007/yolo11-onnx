@@ -3,7 +3,6 @@
 import { useState } from "react";
 import MediaDisplay from "../components/MediaDisplay";
 import ModelStatus from "../components/ModelStatus";
-import Header from "../components/Header";
 import { useYoloModel } from "../hooks/useYoloModel";
 import { useCamera } from "../hooks/useCamera";
 import { useImageProcessing } from "../hooks/useImageProcessing";
@@ -116,8 +115,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen text-foreground font-sans selection:bg-primary/30 selection:text-primary">
-      {/* Header */}
-      <Header />
 
       <main className="max-w-[1600px] mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
