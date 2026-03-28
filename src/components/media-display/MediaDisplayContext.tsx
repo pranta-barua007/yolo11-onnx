@@ -24,6 +24,7 @@ interface MediaDisplayActions {
   setDevice: (val: string) => void;
   setScoreThreshold: (val: number) => void;
   setSelectedDeviceId: (val: string) => void;
+  refreshCameras: (forcePoke?: boolean) => void;
   onCameraLoad: () => void;
   onImageLoad: () => void;
   onImageSelect: (src: string) => void;

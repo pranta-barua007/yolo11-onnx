@@ -43,25 +43,59 @@ export function useCamera() {
     }
   };
 
-  useEffect(() => {
-    const getCameras = async () => {
-      try {
-        // Removed initial permission request to get labels on mount
-        // This will be handled when the user clicks "Open Camera"
+  const refreshCameras = useCallback(async (forcePoke = false) => {
+    try {
+      let devices = await navigator.mediaDevices.enumerateDevices();
+      let videoDevices = devices.filter((device) => device.kind === "videoinput");
 
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter((device) => device.kind === "videoinput");
-        setCameras(videoDevices);
+      // Only poke if requested AND labels are missing
+      const needsPoke = forcePoke && (videoDevices.length === 0 || videoDevices.every(d => !d.label));
 
-        if (videoDevices.length > 0 && !selectedDeviceId) {
-          setSelectedDeviceId(videoDevices[0].deviceId);
+      if (needsPoke && typeof navigator !== "undefined" && navigator.mediaDevices.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          stream.getTracks().forEach(track => track.stop());
+          devices = await navigator.mediaDevices.enumerateDevices();
+          videoDevices = devices.filter((device) => device.kind === "videoinput");
+        } catch (err: unknown) {
+          // Suppress 'NotReadableError' during poke (camera busy) 
+          // and 'NotAllowedError' (user just denied, we'll keep the placeholder)
+          if (err instanceof Error) {
+            if (err.name !== 'NotReadableError' && err.name !== 'NotAllowedError') {
+              console.warn("[useCamera] Hardware scan hint:", err.name);
+            }
+          }
         }
-      } catch (error) {
-        console.error("Error getting cameras:", error);
       }
-    };
-    getCameras();
+
+      setCameras(videoDevices);
+      
+      // If selectedDeviceId is stale (no longer in current list), clear it so placeholder shows
+      const isStale = selectedDeviceId && !videoDevices.some(d => d.deviceId === selectedDeviceId);
+      if (isStale) {
+        setSelectedDeviceId("");
+      }
+
+      // Only auto-select if labels are available (implies permission granted)
+      const hasLabels = videoDevices.length > 0 && videoDevices.every(d => !!d.label);
+      if (hasLabels && (!selectedDeviceId || isStale)) {
+        setSelectedDeviceId(videoDevices[0].deviceId);
+      }
+    } catch (error) {
+      console.error("Error refreshing cameras:", error);
+    }
   }, [selectedDeviceId]);
+
+  useEffect(() => {
+    // Initial scan on mount (no poke, just see what's there)
+    // Wrapped in Promise to avoid cascading render warning in some lint environments
+    Promise.resolve().then(() => refreshCameras(false));
+
+    // Listen for hardware changes
+    const handleChange = () => refreshCameras(false);
+    navigator.mediaDevices.addEventListener("devicechange", handleChange);
+    return () => navigator.mediaDevices.removeEventListener("devicechange", handleChange);
+  }, [refreshCameras]);
 
   return {
     cameras,
@@ -70,5 +104,6 @@ export function useCamera() {
     setSelectedDeviceId,
     toggleCamera,
     stopCamera,
+    refreshCameras,
   };
 }

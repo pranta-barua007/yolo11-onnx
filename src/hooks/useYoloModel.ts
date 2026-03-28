@@ -36,6 +36,7 @@ export function useYoloModel() {
       name: m.name,
       url: m.cacheKey,
       classes: m.classes,
+      capabilities: m.capabilities,
     }));
   });
 

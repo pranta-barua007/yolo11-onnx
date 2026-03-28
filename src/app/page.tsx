@@ -38,6 +38,7 @@ export default function Home() {
     selectedDeviceId,
     setSelectedDeviceId,
     toggleCamera,
+    refreshCameras,
   } = useCamera();
 
   const { fps, tick: fpsTick, reset: fpsReset } = useFps();
@@ -163,6 +164,7 @@ export default function Home() {
             cameras={cameras}
             selectedDeviceId={selectedDeviceId}
             setSelectedDeviceId={setSelectedDeviceId}
+            refreshCameras={refreshCameras}
             customModels={customModels}
             addCustomModel={addCustomModel}
             removeCustomModel={removeCustomModel}

@@ -38,6 +38,7 @@ interface MediaDisplayProps {
   cameras: MediaDeviceInfo[];
   selectedDeviceId: string;
   setSelectedDeviceId: (val: string) => void;
+  refreshCameras: (forcePoke?: boolean) => void;
   customModels: CustomModel[];
   addCustomModel: (model: CustomModel & { buffer?: ArrayBuffer }) => void;
   removeCustomModel: (url: string) => void;
@@ -69,6 +70,7 @@ export default function MediaDisplay(props: MediaDisplayProps) {
       setDevice: props.setDevice,
       setScoreThreshold: props.setScoreThreshold,
       setSelectedDeviceId: props.setSelectedDeviceId,
+      refreshCameras: props.refreshCameras,
       onCameraLoad: props.onCameraLoad,
       onImageLoad: props.onImageLoad,
       onImageSelect: props.onImageSelect,
