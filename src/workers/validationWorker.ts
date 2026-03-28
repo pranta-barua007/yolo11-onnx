@@ -27,8 +27,15 @@ self.onmessage = async (e: MessageEvent) => {
     const output0 = warmupOutput[outputNames[0]];
     const output1 = outputNames.length > 1 ? warmupOutput[outputNames[1]] : null;
     
-    const capabilities: ("D" | "S" | "P")[] = ["D"]; // YOLO base
+    const capabilities: ("D" | "S" | "P" | "Q" | "I8")[] = ["D"]; // YOLO base
     
+    // Check if input is FP16
+    const sessionWithMeta = session as unknown as { inputMetadata: Record<string, { type: string }> };
+    const inputMeta = sessionWithMeta.inputMetadata || {};
+    if (inputMeta[inputName] && inputMeta[inputName].type === "float16") {
+      capabilities.push("Q");
+    }
+
     if (output0) {
       const NUM_CHANNELS = output0.dims[1];
       const NUM_SCORES = classesConfig ? classesConfig.length : 80;
