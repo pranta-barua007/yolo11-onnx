@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import Header from "@/components/Header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "YOLO Real-time Segmentation App",
-  description: "Browser-native segmentation powered by YOLO11 and ONNX Runtime Web. Instance segmentation of dental structures, 100% on-device.",
+  title: "YOLO Real-time | Edge AI in the Browser",
+  description: "Browser-native object detection, segmentation, and pose estimation powered by YOLO11 and ONNX Runtime Web. WebGPU-accelerated, 100% on-device.",
 };
 
 export default function RootLayout({
@@ -34,6 +35,7 @@ export default function RootLayout({
           enableSystem={true}
           disableTransitionOnChange
         >
+          <Header />
           {children}
         </ThemeProvider>
       </body>
