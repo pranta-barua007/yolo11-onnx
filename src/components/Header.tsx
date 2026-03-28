@@ -6,7 +6,8 @@ import { Info } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 
 export default function Header() {
-    const pathname = usePathname();
+    const rawPathname = usePathname();
+    const pathname = rawPathname === "/" ? "/" : rawPathname.replace(/\/+$/, "");
 
     return (
         <header className="sticky top-0 z-30 w-full px-4 md:px-6 py-3 border-b border-border/50 bg-background/80 backdrop-blur-md">
