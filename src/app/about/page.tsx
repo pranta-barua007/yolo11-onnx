@@ -75,7 +75,7 @@ const TECH_STACK = [
 
 export default function AboutPage() {
     return (
-        <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/30 selection:text-primary overflow-x-hidden">
+        <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/30 selection:text-primary">
 
             {/* Sticky Section Nav */}
             <div className="sticky top-[65px] z-20 bg-background/80 backdrop-blur-md border-b border-border/50">
