@@ -66,6 +66,7 @@ export interface CachedCustomModel {
   classes: string[];
   /** Cache key used to retrieve bytes from Cache API. */
   cacheKey: string;
+  capabilities?: ("D" | "S" | "P")[];
 }
 
 /** Load persisted custom model metadata from localStorage. */
@@ -101,4 +102,14 @@ export function addCustomModelMetadata(model: CachedCustomModel): void {
 export function removeCustomModelMetadata(cacheKey: string): void {
   const existing = getCustomModelsMetadata();
   setCustomModelsMetadata(existing.filter((m) => m.cacheKey !== cacheKey));
+}
+
+/** Update an existing custom model's metadata. */
+export function updateCustomModelMetadata(model: CachedCustomModel): void {
+  const existing = getCustomModelsMetadata();
+  const index = existing.findIndex((m) => m.cacheKey === model.cacheKey);
+  if (index > -1) {
+    existing[index] = { ...existing[index], ...model };
+    setCustomModelsMetadata(existing);
+  }
 }

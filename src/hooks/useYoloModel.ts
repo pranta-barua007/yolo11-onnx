@@ -5,8 +5,10 @@ import { CustomModel } from "../utils/types";
 import { isWebGPUSupported } from "../utils/gpu_check";
 import {
   putModelInCache,
+  deleteModelFromCache,
   getCustomModelsMetadata,
   addCustomModelMetadata,
+  removeCustomModelMetadata,
 } from "../utils/model_cache";
 import defaultClasses from "../utils/yolo_classes.json";
 import { BASE_PATH } from "../utils/paths";
@@ -51,10 +53,20 @@ export function useYoloModel() {
   // Active classes for the currently selected model
   const activeClasses = (() => {
     const customModel = customModels.find((m) => m.url === modelName);
-    return customModel ? customModel.classes : defaultClasses;
+    if (customModel) return customModel.classes;
+    if (modelName.includes("pose")) return ["person"];
+    return defaultClasses;
   })();
 
-  const config = { input_shape, iou_threshold, score_threshold: scoreThreshold, classes: activeClasses };
+  const activeCapabilities = (() => {
+    const customModel = customModels.find((m) => m.url === modelName);
+    if (customModel) return customModel.capabilities;
+    if (modelName.includes("pose")) return ["D", "P"] as ("D" | "S" | "P")[];
+    if (modelName.includes("seg")) return ["D", "S"] as ("D" | "S" | "P")[];
+    return ["D"] as ("D" | "S" | "P")[];
+  })();
+
+  const config = { input_shape, iou_threshold, score_threshold: scoreThreshold, classes: activeClasses, capabilities: activeCapabilities };
 
   // Track whether a load is already in-flight
   const loadingRef = useRef<boolean>(false);
@@ -77,6 +89,7 @@ export function useYoloModel() {
           setModelStatus("Model loaded");
           setIsModelLoaded(true);
           loadingRef.current = false;
+
         } else if (msg.status === "webgpu-failed") {
           console.warn("[useYoloModel] WebGPU failed in worker, falling back to WASM...");
           loadingRef.current = false;
@@ -162,7 +175,7 @@ export function useYoloModel() {
    * Called from AddModelDialog with the file's ArrayBuffer.
    */
   const addCustomModel = useCallback(async (model: CustomModel & { buffer?: ArrayBuffer }) => {
-    const cacheKey = `custom:${model.name}`;
+    const cacheKey = `/custom-models/${model.name}`;
 
     // Persist bytes to Cache API if buffer provided
     if (model.buffer) {
@@ -174,6 +187,7 @@ export function useYoloModel() {
       name: model.name,
       classes: model.classes,
       cacheKey,
+      capabilities: model.capabilities,
     });
 
     // Register in React state
@@ -181,6 +195,7 @@ export function useYoloModel() {
       name: model.name,
       url: cacheKey,
       classes: model.classes,
+      capabilities: model.capabilities,
     };
 
     setCustomModels((prev) => {
@@ -188,6 +203,15 @@ export function useYoloModel() {
       return [...filtered, registeredModel];
     });
     setModelName(cacheKey);
+  }, []);
+
+  const removeCustomModel = useCallback((url: string) => {
+    deleteModelFromCache(url);
+    removeCustomModelMetadata(url);
+    
+    setCustomModels((prev) => prev.filter((m) => m.url !== url));
+    
+    setModelName((prev) => (prev === url ? "yolo11n-seg" : prev));
   }, []);
 
   // Initialize worker on mount
@@ -222,6 +246,7 @@ export function useYoloModel() {
     loadModel,
     reloadModel,
     addCustomModel,
+    removeCustomModel,
     activeClasses,
     scoreThreshold,
     setScoreThreshold,

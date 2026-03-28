@@ -297,7 +297,7 @@ export function useImageProcessing() {
   /**
    * Re-draw overlay: restore mask snapshot then draw filtered boxes.
    */
-  const redrawOverlay = useCallback(async (boxes: Box[], filterIndex: number | null) => {
+  const redrawOverlay = useCallback(async (boxes: Box[], filterIndex: number | null, selectedKeypointIdx: number | null = null) => {
     if (!overlayRef.current) return;
     const ctx = overlayRef.current.getContext("2d");
     if (!ctx) return;
@@ -308,7 +308,7 @@ export function useImageProcessing() {
       ctx.clearRect(0, 0, overlayRef.current.width, overlayRef.current.height);
     }
 
-    await draw_bounding_boxes(boxes, overlayRef.current, filterIndex);
+    await draw_bounding_boxes(boxes, overlayRef.current, filterIndex, undefined, selectedKeypointIdx);
   }, []);
 
   /** Composite source image + overlay canvas and download as PNG. */

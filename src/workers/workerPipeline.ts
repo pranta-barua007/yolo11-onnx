@@ -14,7 +14,7 @@
  */
 import * as ort from "onnxruntime-web";
 import cv from "@techstark/opencv-js";
-import { applyNMS, extractDetections } from "../utils/img_preprocess";
+import { applyNMS, extractDetections, extractPoseDetections } from "../utils/img_preprocess";
 import { generateMaskOverlay } from "../utils/mask_processing";
 
 interface Config {
@@ -22,12 +22,14 @@ interface Config {
   iou_threshold: number;
   score_threshold: number;
   classes?: string[];
+  capabilities?: ("D" | "S" | "P")[];
 }
 
 interface WorkerBox {
   bbox: number[];
   class_idx: number;
   score: number;
+  keypoints?: { x: number; y: number; score: number }[];
 }
 
 export interface PipelineResult {
@@ -78,7 +80,8 @@ export async function workerInferencePipeline(
   session: ort.InferenceSession,
   config: Config,
   overlayW: number,
-  overlayH: number
+  overlayH: number,
+  inputName: string
 ): Promise<PipelineResult> {
   const modelW = config.input_shape[3];
   const modelH = config.input_shape[2];
@@ -88,55 +91,87 @@ export async function workerInferencePipeline(
   blob.delete();
 
   const start = performance.now();
-  const output = await session.run({ images: input_tensor });
+  const output = await session.run({ [inputName]: input_tensor });
   const end = performance.now();
   input_tensor.dispose();
 
-  const output0 = output.output0;
-  const output1 = output.output1;
-  if (!output0 || !output1) {
-    output0?.dispose();
-    output1?.dispose();
+  const outputNames = session.outputNames;
+  const output0 = output[outputNames[0]];
+  const output1 = outputNames.length > 1 ? output[outputNames[1]] : null;
+
+  if (!output0) {
+    if (output1) output1.dispose();
     return { boxes: [], inferenceTime: "0", maskPixels: null, maskWidth: 0, maskHeight: 0 };
   }
 
   const NUM_PREDICTIONS = output0.dims[2];
   const activeClasses = config.classes ?? DEFAULT_CLASSES;
   const NUM_SCORES = activeClasses.length;
-  const NUM_MASK_WEIGHTS = 32;
+  const NUM_CHANNELS = output0.dims[1];
+  const NUM_MASK_WEIGHTS = Math.max(0, NUM_CHANNELS - (4 + NUM_SCORES)); 
+  const isSegmentation = config.capabilities ? config.capabilities.includes("S") : (output1 && output1.dims.length === 4 && NUM_MASK_WEIGHTS > 0);
 
   const predictionsData = output0.data as Float32Array;
-  const proto_mask = output1.data as Float32Array;
-  const MASK_CHANNELS = output1.dims[1];
-  const MASK_HEIGHT = output1.dims[2];
-  const MASK_WIDTH = output1.dims[3];
+  
+  let proto_mask: Float32Array | null = null;
+  let MASK_CHANNELS = 0, MASK_HEIGHT = 0, MASK_WIDTH = 0;
+  
+  if (isSegmentation && output1) {
+    proto_mask = output1.data as Float32Array;
+    MASK_CHANNELS = output1.dims[1];
+    MASK_HEIGHT = output1.dims[2];
+    MASK_WIDTH = output1.dims[3];
+  }
+
   output0.dispose();
-  output1.dispose();
+  if (output1) output1.dispose();
 
   const xRatio = overlayW / modelW;
   const yRatio = overlayH / modelH;
 
   // ── Post-process: shared functions ──
-  const results = extractDetections(
-    predictionsData, NUM_PREDICTIONS, NUM_SCORES,
-    NUM_MASK_WEIGHTS, config.score_threshold, xRatio, yRatio
-  );
+  const isPose = config.capabilities ? config.capabilities.includes("P") : false;
+
+  let results: Array<{
+    bbox: number[];
+    class_idx: number;
+    score: number;
+    mask_weights: Float32Array;
+    keypoints?: { x: number; y: number; score: number }[];
+  }>;
+  if (isPose) {
+    results = extractPoseDetections(
+      predictionsData, NUM_PREDICTIONS,
+      config.score_threshold, xRatio, yRatio
+    );
+  } else {
+    results = extractDetections(
+      predictionsData, NUM_PREDICTIONS, NUM_SCORES,
+      NUM_MASK_WEIGHTS, config.score_threshold, xRatio, yRatio
+    );
+  }
 
   const scoresArray = results.map((r) => r.score);
   const selected_indices = applyNMS(results, scoresArray, config.iou_threshold);
   const filtered = selected_indices.map((i) => results[i]);
 
-  const maskResult = generateMaskOverlay(
-    filtered, proto_mask,
-    MASK_CHANNELS, MASK_HEIGHT, MASK_WIDTH,
-    modelW, modelH, overlayW, overlayH,
-    xRatio, yRatio
-  );
+  let maskResult = null;
+  
+  // Composition: only run mask generation if we detected a valid segmentation model
+  if (isSegmentation && proto_mask) {
+    maskResult = generateMaskOverlay(
+      filtered, proto_mask,
+      MASK_CHANNELS, MASK_HEIGHT, MASK_WIDTH,
+      modelW, modelH, overlayW, overlayH,
+      xRatio, yRatio
+    );
+  }
 
   const outputBoxes: WorkerBox[] = filtered.map((r) => ({
     bbox: r.bbox,
     class_idx: r.class_idx,
     score: r.score,
+    keypoints: r.keypoints,
   }));
 
   return {

@@ -131,7 +131,9 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
         const shape = msg.config.input_shape;
         const dummySize = shape.reduce((a, b) => a * b, 1);
         const dummy = new ort.Tensor("float32", new Float32Array(dummySize), shape);
-        const warmupOutput = await session.run({ images: dummy });
+        const inputName = session.inputNames[0] || "images";
+        const warmupOutput = await session.run({ [inputName]: dummy });
+        
         warmupOutput.output0?.dispose();
         warmupOutput.output1?.dispose();
         dummy.dispose();
@@ -190,6 +192,7 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
       }
 
       try {
+        const inputName = session.inputNames[0] || "images";
         const result = await workerInferencePipeline(
           msg.pixels,
           msg.srcWidth,
@@ -197,7 +200,8 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
           session,
           msg.config,
           msg.overlayWidth,
-          msg.overlayHeight
+          msg.overlayHeight,
+          inputName
         );
 
         // Transfer the mask pixel buffer for zero-copy (if it exists)
