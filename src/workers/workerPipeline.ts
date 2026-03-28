@@ -23,7 +23,7 @@ interface Config {
   iou_threshold: number;
   score_threshold: number;
   classes?: string[];
-  capabilities?: ("D" | "S" | "P" | "Q" | "I8")[];
+  capabilities?: ("D" | "S" | "P" | "Q")[];
 }
 
 interface WorkerBox {

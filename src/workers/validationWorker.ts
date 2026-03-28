@@ -27,7 +27,7 @@ self.onmessage = async (e: MessageEvent) => {
     const output0 = warmupOutput[outputNames[0]];
     const output1 = outputNames.length > 1 ? warmupOutput[outputNames[1]] : null;
     
-    const capabilities: ("D" | "S" | "P" | "Q" | "I8")[] = ["D"]; // YOLO base
+    const capabilities: ("D" | "S" | "P" | "Q")[] = ["D"]; // YOLO base
     
     // Check if input is FP16
     const sessionWithMeta = session as unknown as { inputMetadata: Record<string, { type: string }> };

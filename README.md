@@ -71,4 +71,4 @@ pnpm dev
 - **Precision-Agnostic Pipeline**: Automatic detection of FP16 models with real-time bit-depth transformation.
 - **Worker-Based Inference**: 100% Non-blocking UI using dedicated Web Workers for preprocessing and ONNX execution.
 - **Dynamic Masking**: Hybrid CPU/GPU mask generation for Instance Segmentation.
-- **Capability Aware**: Auto-tags models with `Q` (Quantized) or `I8` (Int8) indicators.
+- **Capability Aware**: Auto-tags models with `Q` (Quantized/FP16) indicators.

@@ -62,10 +62,10 @@ export function useYoloModel() {
   const activeCapabilities = (() => {
     const customModel = customModels.find((m) => m.url === modelName);
     if (customModel) return customModel.capabilities;
-    if (modelName.includes("pose")) return ["D", "P"] as ("D" | "S" | "P" | "Q" | "I8")[];
-    if (modelName.includes("seg")) return ["D", "S"] as ("D" | "S" | "P" | "Q" | "I8")[];
-    if (modelName === "yolo11s") return ["D", "Q"] as ("D" | "S" | "P" | "Q" | "I8")[];
-    return ["D"] as ("D" | "S" | "P" | "Q" | "I8")[];
+    if (modelName.includes("pose")) return ["D", "P"] as ("D" | "S" | "P" | "Q")[];
+    if (modelName.includes("seg")) return ["D", "S"] as ("D" | "S" | "P" | "Q")[];
+    if (modelName === "yolo11s") return ["D", "Q"] as ("D" | "S" | "P" | "Q")[];
+    return ["D"] as ("D" | "S" | "P" | "Q")[];
   })();
 
   const config = { input_shape, iou_threshold, score_threshold: scoreThreshold, classes: activeClasses, capabilities: activeCapabilities };

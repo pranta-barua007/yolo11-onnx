@@ -13,7 +13,7 @@ import {
 import { useMediaDisplay } from "./MediaDisplayContext";
 import AddModelDialog from "../AddModelDialog";
 
-function CapabilityBadges({ capabilities = [] }: { capabilities?: ("D" | "S" | "P" | "Q" | "I8")[] }) {
+function CapabilityBadges({ capabilities = [] }: { capabilities?: ("D" | "S" | "P" | "Q")[] }) {
   if (!capabilities.length) return null;
   
   const colors = {
@@ -21,7 +21,6 @@ function CapabilityBadges({ capabilities = [] }: { capabilities?: ("D" | "S" | "
     S: "text-blue-500 bg-blue-500/10 border-blue-500/20",
     P: "text-purple-500 bg-purple-500/10 border-purple-500/20",
     Q: "text-amber-500 bg-amber-500/10 border-amber-500/20",
-    I8: "text-orange-600 bg-orange-600/10 border-orange-600/20"
   };
 
   const getTitle = (cap: string) => {
@@ -30,7 +29,6 @@ function CapabilityBadges({ capabilities = [] }: { capabilities?: ("D" | "S" | "
       case 'S': return 'Segmentation';
       case 'P': return 'Pose';
       case 'Q': return 'Quantized (FP16)';
-      case 'I8': return 'Quantized (INT8)';
       default: return cap;
     }
   };

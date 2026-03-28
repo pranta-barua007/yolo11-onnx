@@ -10,5 +10,5 @@ export interface CustomModel {
   name: string;
   url: string;
   classes: string[];
-  capabilities?: ("D" | "S" | "P" | "Q" | "I8")[];
+  capabilities?: ("D" | "S" | "P" | "Q")[];
 }

@@ -66,7 +66,7 @@ export interface CachedCustomModel {
   classes: string[];
   /** Cache key used to retrieve bytes from Cache API. */
   cacheKey: string;
-  capabilities?: ("D" | "S" | "P" | "Q" | "I8")[];
+  capabilities?: ("D" | "S" | "P" | "Q")[];
 }
 
 /** Load persisted custom model metadata from localStorage. */
