@@ -116,7 +116,7 @@ export default function Home() {
   return (
     <div className="min-h-screen text-foreground font-sans selection:bg-primary/30 selection:text-primary">
 
-      <main className="max-w-[1600px] mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <main className="mx-auto p-2 sm:p-3 md:p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 lg:gap-6">
 
         {/* Sidebar Status (Detections) */}
         <aside className="lg:col-span-4 xl:col-span-3 space-y-6 flex flex-col order-2 lg:order-1 h-[calc(100vh-120px)] sticky top-24">
