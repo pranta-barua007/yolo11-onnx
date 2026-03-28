@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, FileJson, X, Plus, AlertCircle, CheckCircle2 } from "lucide-react";
 import { CustomModel } from "@/utils/types";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface AddModelDialogProps {
   open: boolean;
@@ -28,6 +29,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
   const [manualInput, setManualInput] = useState("");
   const [classError, setClassError] = useState<string | null>(null);
   const [classMode, setClassMode] = useState<"json" | "manual">("json");
+  const [manualCaps, setManualCaps] = useState<("Q" | "I8")[]>([]);
   const [isValidating, setIsValidating] = useState(false);
 
   const modelInputRef = useRef<HTMLInputElement>(null);
@@ -39,6 +41,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
     setManualInput("");
     setClassError(null);
     setClassMode("json");
+    setManualCaps([]);
     setIsValidating(false);
   }, []);
 
@@ -133,7 +136,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
       const buffer = await modelFile.arrayBuffer();
 
       // Perform non-blocking structural validation via Web Worker
-      const capabilities = await new Promise<("D" | "S" | "P")[]>((resolve, reject) => {
+      const capabilities = await new Promise<("D" | "S" | "P" | "Q" | "I8")[]>((resolve, reject) => {
         const worker = new Worker(new URL("../workers/validationWorker.ts", import.meta.url), { type: "module" });
         worker.onmessage = (e) => {
           if (e.data.status === "success") {
@@ -154,11 +157,13 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
 
       const cacheKey = `custom:${modelFile.name.replace(".onnx", "")}`;
 
+      const finalCaps = Array.from(new Set([...capabilities, ...manualCaps])) as ("D" | "S" | "P" | "Q" | "I8")[];
+
       onAddModel({
         name: modelFile.name.replace(".onnx", ""),
         url: cacheKey,
         classes,
-        capabilities,
+        capabilities: finalCaps,
         buffer,
       });
       resetState();
@@ -334,6 +339,30 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
               </div>
             </div>
           ) : null}
+        </div>
+
+        {/* ── Step 3: Experimental/Quantized Flags ── */}
+        <div className="space-y-3 pt-2">
+          <Label className="font-semibold text-sm text-foreground">Model Precision (Manual)</Label>
+          <ToggleGroup 
+            type="multiple" 
+            variant="outline" 
+            className="justify-start gap-2"
+            value={manualCaps}
+            onValueChange={(val) => setManualCaps(val as ("Q" | "I8")[])}
+          >
+            <ToggleGroupItem value="Q" className="h-8 text-[11px] gap-2 data-[state=on]:bg-amber-500/10 data-[state=on]:text-amber-500 data-[state=on]:border-amber-500/30">
+              <CheckCircle2 className={`w-3 h-3 ${manualCaps.includes("Q") ? "opacity-100" : "opacity-0"}`} />
+              Quantized (FP16)
+            </ToggleGroupItem>
+            <ToggleGroupItem value="I8" className="h-8 text-[11px] gap-2 data-[state=on]:bg-orange-600/10 data-[state=on]:text-orange-600 data-[state=on]:border-orange-600/30">
+              <CheckCircle2 className={`w-3 h-3 ${manualCaps.includes("I8") ? "opacity-100" : "opacity-0"}`} />
+              Quantized (INT8)
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <p className="text-[10px] text-muted-foreground">
+            Auto-detection will also scan for quantization, but you can explicitly tag them here.
+          </p>
         </div>
 
         {/* ── Actions ── */}
