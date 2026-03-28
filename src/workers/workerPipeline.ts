@@ -16,13 +16,14 @@ import * as ort from "onnxruntime-web";
 import cv from "@techstark/opencv-js";
 import { applyNMS, extractDetections, extractPoseDetections } from "../utils/img_preprocess";
 import { generateMaskOverlay } from "../utils/mask_processing";
+import { ensurePrecision, hydratePrecision } from "../utils/precision";
 
 interface Config {
   input_shape: number[];
   iou_threshold: number;
   score_threshold: number;
   classes?: string[];
-  capabilities?: ("D" | "S" | "P")[];
+  capabilities?: ("D" | "S" | "P" | "Q" | "I8")[];
 }
 
 interface WorkerBox {
@@ -87,7 +88,13 @@ export async function workerInferencePipeline(
   const modelH = config.input_shape[2];
 
   const blob = preProcessPixels(pixels, srcWidth, srcHeight, modelW, modelH);
-  const input_tensor = new ort.Tensor("float32", blob.data32F, [1, 3, modelH, modelW]);
+  
+  // ── Precision-Agnostic Input Creation ──
+  const sessionMeta = (session as unknown as { inputMetadata: Record<string, { type: string }> }).inputMetadata;
+  const inputType = sessionMeta?.[inputName]?.type || "float32";
+  const tensorData = ensurePrecision(blob.data32F, inputType);
+  
+  const input_tensor = new ort.Tensor(inputType as "float32" | "float16", tensorData, [1, 3, modelH, modelW]);
   blob.delete();
 
   const start = performance.now();
@@ -96,35 +103,36 @@ export async function workerInferencePipeline(
   input_tensor.dispose();
 
   const outputNames = session.outputNames;
-  const output0 = output[outputNames[0]];
-  const output1 = outputNames.length > 1 ? output[outputNames[1]] : null;
+  const rawOutput0 = output[outputNames[0]];
+  const rawOutput1 = outputNames.length > 1 ? output[outputNames[1]] : null;
 
-  if (!output0) {
-    if (output1) output1.dispose();
+  if (!rawOutput0) {
+    if (rawOutput1) rawOutput1.dispose();
     return { boxes: [], inferenceTime: "0", maskPixels: null, maskWidth: 0, maskHeight: 0 };
   }
 
-  const NUM_PREDICTIONS = output0.dims[2];
-  const activeClasses = config.classes ?? DEFAULT_CLASSES;
-  const NUM_SCORES = activeClasses.length;
-  const NUM_CHANNELS = output0.dims[1];
-  const NUM_MASK_WEIGHTS = Math.max(0, NUM_CHANNELS - (4 + NUM_SCORES)); 
-  const isSegmentation = config.capabilities ? config.capabilities.includes("S") : (output1 && output1.dims.length === 4 && NUM_MASK_WEIGHTS > 0);
-
-  const predictionsData = output0.data as Float32Array;
+  // ── Restore Precision ──
+  const predictionsData = hydratePrecision(rawOutput0.data as Float32Array || rawOutput0.data as Uint16Array);
   
   let proto_mask: Float32Array | null = null;
   let MASK_CHANNELS = 0, MASK_HEIGHT = 0, MASK_WIDTH = 0;
   
-  if (isSegmentation && output1) {
-    proto_mask = output1.data as Float32Array;
-    MASK_CHANNELS = output1.dims[1];
-    MASK_HEIGHT = output1.dims[2];
-    MASK_WIDTH = output1.dims[3];
+  if (rawOutput1) {
+    proto_mask = hydratePrecision(rawOutput1.data as Float32Array || rawOutput1.data as Uint16Array);
+    MASK_CHANNELS = rawOutput1.dims[1];
+    MASK_HEIGHT = rawOutput1.dims[2];
+    MASK_WIDTH = rawOutput1.dims[3];
   }
 
-  output0.dispose();
-  if (output1) output1.dispose();
+  const NUM_PREDICTIONS = rawOutput0.dims[2];
+  const activeClasses = config.classes ?? DEFAULT_CLASSES;
+  const NUM_SCORES = activeClasses.length;
+  const NUM_CHANNELS = rawOutput0.dims[1];
+  const NUM_MASK_WEIGHTS = Math.max(0, NUM_CHANNELS - (4 + NUM_SCORES)); 
+  const isSegmentation = config.capabilities ? config.capabilities.includes("S") : (rawOutput1 && rawOutput1.dims.length === 4 && NUM_MASK_WEIGHTS > 0);
+
+  rawOutput0.dispose();
+  if (rawOutput1) rawOutput1.dispose();
 
   const xRatio = overlayW / modelW;
   const yRatio = overlayH / modelH;
@@ -132,7 +140,7 @@ export async function workerInferencePipeline(
   // ── Post-process: shared functions ──
   const isPose = config.capabilities ? config.capabilities.includes("P") : false;
 
-  let results: Array<{
+  let detections: Array<{
     bbox: number[];
     class_idx: number;
     score: number;
@@ -140,20 +148,20 @@ export async function workerInferencePipeline(
     keypoints?: { x: number; y: number; score: number }[];
   }>;
   if (isPose) {
-    results = extractPoseDetections(
+    detections = extractPoseDetections(
       predictionsData, NUM_PREDICTIONS,
       config.score_threshold, xRatio, yRatio
     );
   } else {
-    results = extractDetections(
+    detections = extractDetections(
       predictionsData, NUM_PREDICTIONS, NUM_SCORES,
       NUM_MASK_WEIGHTS, config.score_threshold, xRatio, yRatio
     );
   }
 
-  const scoresArray = results.map((r) => r.score);
-  const selected_indices = applyNMS(results, scoresArray, config.iou_threshold);
-  const filtered = selected_indices.map((i) => results[i]);
+  const scoresArray = detections.map((det) => det.score);
+  const selectedIndices = applyNMS(detections, scoresArray, config.iou_threshold);
+  const filtered = selectedIndices.map((idx) => detections[idx]);
 
   let maskResult = null;
   
@@ -167,11 +175,11 @@ export async function workerInferencePipeline(
     );
   }
 
-  const outputBoxes: WorkerBox[] = filtered.map((r) => ({
-    bbox: r.bbox,
-    class_idx: r.class_idx,
-    score: r.score,
-    keypoints: r.keypoints,
+  const outputBoxes: WorkerBox[] = filtered.map((det) => ({
+    bbox: det.bbox,
+    class_idx: det.class_idx,
+    score: det.score,
+    keypoints: det.keypoints,
   }));
 
   return {

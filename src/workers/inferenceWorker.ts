@@ -1,6 +1,7 @@
 import * as ort from "onnxruntime-web";
 import { workerInferencePipeline } from "./workerPipeline";
 import { getModelFromCache, putModelInCache, deleteModelFromCache } from "../utils/model_cache";
+import { ensurePrecision } from "../utils/precision";
 
 // ── Worker-global state ──
 let session: ort.InferenceSession | null = null;
@@ -127,15 +128,32 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
           logSeverityLevel: 3,
         });
 
-        // Warm-up inference
+        // ── Session Diagnostics ──
+        const sessionWithMeta = session as unknown as { 
+          inputMetadata: Record<string, { type: string }>; 
+          outputMetadata: Record<string, unknown>;
+        };
+        console.log(`[Worker] Session created on ${msg.device}`);
+        console.log("[Worker] Input Metadata:", sessionWithMeta.inputMetadata);
+        console.log("[Worker] Output Metadata:", sessionWithMeta.outputMetadata);
+
+        // ── Precision-Aware Warm-up ──
+        const inputName = session.inputNames[0] || "images";
+        const inputMeta = sessionWithMeta.inputMetadata?.[inputName];
+        const inputType = inputMeta?.type || "float32";
+
+        
         const shape = msg.config.input_shape;
         const dummySize = shape.reduce((a, b) => a * b, 1);
-        const dummy = new ort.Tensor("float32", new Float32Array(dummySize), shape);
-        const inputName = session.inputNames[0] || "images";
+        
+        // Use ensurePrecision to match model requirements
+        const dummyData = ensurePrecision(new Float32Array(dummySize), inputType);
+        const dummy = new ort.Tensor(inputType as "float32" | "float16", dummyData, shape);
+        
         const warmupOutput = await session.run({ [inputName]: dummy });
         
-        warmupOutput.output0?.dispose();
-        warmupOutput.output1?.dispose();
+        // Dispose warmup outputs
+        Object.values(warmupOutput).forEach(t => t.dispose());
         dummy.dispose();
 
         const warmUpTime = (performance.now() - start).toFixed(2);
