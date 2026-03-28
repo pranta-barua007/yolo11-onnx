@@ -147,13 +147,19 @@ function ModelSelect() {
 function CameraSelect() {
   const {
     state: { cameras, selectedDeviceId },
-    actions: { setSelectedDeviceId },
+    actions: { setSelectedDeviceId, refreshCameras },
   } = useMediaDisplay();
 
   return (
     <div className="flex items-center gap-2">
       <Video className="w-3.5 h-3.5 text-muted-foreground" />
-      <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
+      <Select 
+        value={selectedDeviceId} 
+        onValueChange={setSelectedDeviceId}
+        onOpenChange={(open) => {
+          if (open) refreshCameras(true);
+        }}
+      >
         <SelectTrigger className="h-8 w-full md:w-[160px] text-[11px] font-medium text-foreground bg-background border-border/40 rounded-full hover:bg-muted/50 transition-colors">
           <SelectValue placeholder="Select Camera" />
         </SelectTrigger>
