@@ -65,12 +65,12 @@ export default function Header() {
                         href="https://github.com/pranta-barua007/yolo11-onnx"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-muted-foreground hover:text-foreground border border-border hover:border-border/80 rounded-lg transition-colors duration-200 active:scale-95"
+                        className="hidden md:flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors duration-200 active:scale-95"
                     >
                         <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-amber-400">
                             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z" />
                         </svg>
-                        Star on GitHub
+                        GitHub
                     </a>
                     <ThemeToggle />
                 </div>
