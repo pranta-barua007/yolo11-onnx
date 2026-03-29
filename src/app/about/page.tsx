@@ -324,7 +324,7 @@ function encodeFloat16(val) {
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Card className="border-border/40 bg-card p-6 space-y-4 hover:border-primary/30 transition-colors duration-200">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-base font-semibold text-foreground">Ultralytics</h3>
@@ -364,6 +364,26 @@ function encodeFloat16(val) {
                                 className="inline-flex items-center gap-1.5 text-primary text-xs font-medium hover:underline decoration-primary/50 underline-offset-4"
                             >
                                 onnxruntime.ai <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                            </a>
+                        </Card>
+
+                        <Card className="border-border/40 bg-card p-6 space-y-4 hover:border-primary/30 transition-colors duration-200">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-base font-semibold text-foreground text-pretty pr-2">Multi-Task Web</h3>
+                                <span className="text-[10px] font-bold uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full tracking-wider">
+                                    Reference
+                                </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                                Huge credits to <strong>nomi30701</strong> for their fantastic repository which served as a crucial foundation and reference for the multi-task web implementation.
+                            </p>
+                            <a
+                                href="https://github.com/nomi30701/yolo-multi-task-onnxruntime-web"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-primary text-xs font-medium hover:underline decoration-primary/50 underline-offset-4"
+                            >
+                                GitHub <ExternalLink className="w-3 h-3" aria-hidden="true" />
                             </a>
                         </Card>
                     </div>
