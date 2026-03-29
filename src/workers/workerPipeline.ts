@@ -39,6 +39,7 @@ export interface PipelineResult {
   maskPixels: Uint8ClampedArray | null;
   maskWidth: number;
   maskHeight: number;
+  originalBuffer: ArrayBufferLike;
 }
 
 const DEFAULT_CLASSES = ["Crown", "Filling", "Periapical Lesion", "Root Canal Treatment"];
@@ -108,7 +109,7 @@ export async function workerInferencePipeline(
 
   if (!rawOutput0) {
     if (rawOutput1) rawOutput1.dispose();
-    return { boxes: [], inferenceTime: "0", maskPixels: null, maskWidth: 0, maskHeight: 0 };
+    return { boxes: [], inferenceTime: "0", maskPixels: null, maskWidth: 0, maskHeight: 0, originalBuffer: pixels.buffer };
   }
 
   // ── Restore Precision ──
@@ -188,5 +189,6 @@ export async function workerInferencePipeline(
     maskPixels: maskResult?.pixels ?? null,
     maskWidth: overlayW,
     maskHeight: overlayH,
+    originalBuffer: pixels.buffer,
   };
 }
