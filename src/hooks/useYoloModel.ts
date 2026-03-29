@@ -28,7 +28,7 @@ const DEFAULT_SCORE_THRESHOLD = 0.55;
  *   - Model bytes → Cache API (via model_cache.ts)
  *   - Metadata (name, classes) → localStorage
  */
-export function useYoloModel() {
+export function useYoloModel(initialModelName: string = "yolo11n-seg") {
   // Hydrate custom models from localStorage on mount
   const [customModels, setCustomModels] = useState<CustomModel[]>(() => {
     const persisted = getCustomModelsMetadata();
@@ -43,7 +43,7 @@ export function useYoloModel() {
   const [isModelLoaded, setIsModelLoaded] = useState<boolean>(false);
   const [warmUpTime, setWarmUpTime] = useState<string>("0");
   const [device, setDevice] = useState<string>(isWebGPUSupported() ? "webgpu" : "wasm");
-  const [modelName, setModelName] = useState<string>("yolo11n-seg");
+  const [modelName, setModelName] = useState<string>(initialModelName);
   const [modelStatus, setModelStatus] = useState<string>("Loading model...");
   const [scoreThreshold, setScoreThreshold] = useState<number>(DEFAULT_SCORE_THRESHOLD);
 

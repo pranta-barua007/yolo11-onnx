@@ -9,6 +9,7 @@ interface Config {
   iou_threshold: number;
   score_threshold: number;
   classes?: string[];
+  capabilities?: ("D" | "S" | "P" | "Q")[];
 }
 
 /** Minimal box type returned by the worker (no mask_weights needed on main thread) */
@@ -16,6 +17,7 @@ interface WorkerBox {
   bbox: number[];
   class_idx: number;
   score: number;
+  keypoints?: { x: number; y: number; score: number }[];
 }
 
 /**

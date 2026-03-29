@@ -2,12 +2,28 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Info, BookOpen } from "lucide-react";
+import { Info, BookOpen, Zap } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { useState, useRef, useEffect } from "react";
 
 export default function Header() {
     const rawPathname = usePathname();
     const pathname = rawPathname === "/" ? "/" : rawPathname.replace(/\/+$/, "");
+    const isAppsRoute = pathname.startsWith("/apps");
+
+    const [appsOpen, setAppsOpen] = useState(false);
+    const appsRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (appsRef.current && !appsRef.current.contains(e.target as Node)) {
+                setAppsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
 
     return (
         <header className="sticky top-0 z-30 w-full px-3 md:px-6 py-2.5 border-b border-border/50 bg-background/80 backdrop-blur-md">
@@ -57,6 +73,42 @@ export default function Header() {
                             <BookOpen className="w-4 h-4" aria-hidden="true" />
                             Guide
                         </Link>
+
+                        {/* Apps dropdown */}
+                        <div ref={appsRef} className="relative">
+                            <button
+                                onClick={() => setAppsOpen((prev) => !prev)}
+                                className={`px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium rounded-full transition-colors duration-200 flex items-center gap-1.5 ${isAppsRoute
+                                    ? "bg-primary/10 text-primary ring-1 ring-primary/30"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
+                                    }`}
+                            >
+                                <Zap className="w-4 h-4" aria-hidden="true" />
+                                Apps
+                                <svg className={`w-3 h-3 transition-transform duration-200 ${appsOpen ? "rotate-180" : ""}`} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M3 5l3 3 3-3" />
+                                </svg>
+                            </button>
+
+                            {appsOpen && (
+                                <div className="absolute top-full left-0 mt-1.5 w-52 rounded-xl border border-border/50 bg-popover/95 backdrop-blur-md shadow-lg p-1.5 z-50">
+                                    <Link
+                                        href="/apps/formcheck"
+                                        onClick={() => setAppsOpen(false)}
+                                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 ${pathname === "/apps/formcheck"
+                                            ? "bg-primary/10 text-primary"
+                                            : "text-foreground hover:bg-muted/50"
+                                            }`}
+                                    >
+                                        <span className="text-lg" aria-hidden="true">🏋️</span>
+                                        <div>
+                                            <span className="font-medium">FormCheck AI</span>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">Pose tracking & reps</p>
+                                        </div>
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
                     </nav>
                 </div>
 
