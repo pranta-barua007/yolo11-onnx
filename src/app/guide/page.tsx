@@ -34,6 +34,8 @@ export const metadata: Metadata = {
 const NAV_SECTIONS = [
     { id: "app-user", label: "App User" },
     { id: "developer", label: "Developer" },
+    { id: "model-export", label: "Model Export" },
+    { id: "customization", label: "Customization" },
 ];
 
 /* ── Step component ─────────────────────────────── */
@@ -353,7 +355,8 @@ cd yolo11-onnx`}</pre>
                             </div>
                         </Step>
 
-                        <Step step={5} icon={FileOutput} title="Export Your Model (ONNX)">
+                        <div id="model-export" className="scroll-mt-28">
+                            <Step step={5} icon={FileOutput} title="Export Your Model (ONNX)">
                             <p>
                                 Use the Ultralytics Python SDK to export your trained YOLO model to ONNX format.
                                 Run this in a Google Colab notebook or your local Python environment.
@@ -440,7 +443,8 @@ print("✅ WebGPU-safe FP16 model saved")`}</pre>
                                     ONNX Integration Guide <ExternalLink className="w-3 h-3" aria-hidden="true" />
                                 </a>
                             </div>
-                        </Step>
+                            </Step>
+                        </div>
 
                         <Step step={6} icon={Layers} title="Add Your Own ONNX Model">
                             <p>
@@ -494,6 +498,44 @@ print("✅ WebGPU-safe FP16 model saved")`}</pre>
                                 modify the worker&apos;s message handler or add new utility functions in <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">src/utils/</code>.
                             </p>
                         </Step>
+
+                        <div id="customization" className="scroll-mt-28">
+                            <Step step={10} icon={SlidersHorizontal} title="Personalize & Customize">
+                                <p>
+                                    To make this application your own, you will want to update several hardcoded default parameters scattered throughout the codebase.
+                                </p>
+                                
+                                <div className="space-y-4 mt-4">
+                                    <div>
+                                        <h4 className="text-xs font-bold text-foreground">1. Default Confidence Rate</h4>
+                                        <p className="text-xs text-muted-foreground">
+                                            The default confidence threshold is set to <code className="text-[10px] bg-muted px-1 rounded">0.55</code> (55%). To change the starting value for the slider, update <code className="text-[10px] bg-muted px-1 rounded">DEFAULT_SCORE_THRESHOLD</code> in <code className="text-[10px] bg-muted px-1 rounded">src/hooks/useYoloModel.ts</code>.
+                                        </p>
+                                    </div>
+                                    
+                                    <div>
+                                        <h4 className="text-xs font-bold text-foreground">2. Dataset Classes</h4>
+                                        <p className="text-xs text-muted-foreground">
+                                            The default 80 COCO classes are stored in <code className="text-[10px] bg-muted px-1 rounded">src/utils/yolo_classes.json</code>. Update this file with your own dataset classes so the UI correctly auto-colors your bounding boxes.
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="text-xs font-bold text-foreground">3. Application URLs & Links</h4>
+                                        <p className="text-xs text-muted-foreground">
+                                            The GitHub link in the top right is located inside <code className="text-[10px] bg-muted px-1 rounded">src/components/Header.tsx</code>. You should also update the URLs in the <code className="text-[10px] bg-muted px-1 rounded">package.json</code> file.
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="text-xs font-bold text-foreground">4. Built-in Models</h4>
+                                        <p className="text-xs text-muted-foreground">
+                                            The default available models in the dropdown (e.g., YOLO11 Nano, Nano Seg) are hardcoded inside the Select menu in <code className="text-[10px] bg-muted px-1 rounded">src/components/media-display/StatusBar.tsx</code>. Update or remove the <code className="text-[10px] bg-muted px-1 rounded">SelectItem</code> elements to match the models in your <code className="text-[10px] bg-muted px-1 rounded">public/models/</code> folder.
+                                        </p>
+                                    </div>
+                                </div>
+                            </Step>
+                        </div>
                     </div>
 
                     {/* Common Issues */}
