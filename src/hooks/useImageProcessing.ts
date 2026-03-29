@@ -229,6 +229,11 @@ export function useImageProcessing() {
         return;
       }
 
+      // Recycle the array buffer for the next frame
+      if (msg.originalBuffer) {
+        pixelBufferRef.current = { buffer: msg.originalBuffer as ArrayBuffer, width: videoW, height: videoH };
+      }
+
       drawWorkerResults(msg, overlayRef, maskSnapshotRef, setDetails, setInferenceTime);
       onFrameTick?.();
     };
@@ -272,9 +277,8 @@ export function useImageProcessing() {
           [reusablePixels.buffer]
         );
 
-        // Reallocate the reusable buffer for the next frame
-        // (the previous one was transferred to the worker)
-        pixelBufferRef.current = null;
+        // Buffer was successfully transferred and will be returned by the worker
+        // so we DO NOT null it out here. We wait for the worker to bounce it back.
       }
 
       cameraRafRef.current = requestAnimationFrame(processFrame);
