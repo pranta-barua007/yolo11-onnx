@@ -134,18 +134,26 @@ export function extractDetections(
 
   const results: Array<{ bbox: number[]; class_idx: number; score: number; mask_weights: Float32Array; keypoints?: { x: number; y: number; score: number }[] }> = [];
 
-  for (let i = 0; i < numPredictions; i++) {
-    let maxScore = 0;
-    let class_idx = -1;
+  // Transposed loop: Iterate dynamically across scores to maximize L1 cache sequential hits
+  const maxScores = new Float32Array(numPredictions);
+  const maxClassIndices = new Int32Array(numPredictions).fill(-1);
 
-    for (let c = 0; c < numScores; c++) {
-      const score = scores_data[i + c * numPredictions];
-      if (score > maxScore) {
-        maxScore = score;
-        class_idx = c;
+  for (let c = 0; c < numScores; c++) {
+    const classOffset = c * numPredictions;
+    for (let i = 0; i < numPredictions; i++) {
+      const score = scores_data[classOffset + i];
+      if (score > maxScores[i]) {
+        maxScores[i] = score;
+        maxClassIndices[i] = c;
       }
     }
+  }
+
+  for (let i = 0; i < numPredictions; i++) {
+    const maxScore = maxScores[i];
     if (maxScore <= scoreThreshold) continue;
+
+    const class_idx = maxClassIndices[i];
 
     const cx = bbox_data[i];
     const cy = bbox_data[i + numPredictions];
