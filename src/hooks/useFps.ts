@@ -38,7 +38,17 @@ export function useFps(windowMs: number = 1000) {
     // Throttle React state updates to ~4Hz (every 250ms) to avoid re-render storms
     if (now - lastUpdateRef.current > 250) {
       lastUpdateRef.current = now;
-      setFps(timestamps.length);
+      
+      let currentFps = 0;
+      if (timestamps.length > 1) {
+        // Calculate true framerate over the observed time span
+        const timeSpan = now - timestamps[0];
+        currentFps = Math.round((timestamps.length * 1000) / timeSpan);
+      } else {
+        currentFps = timestamps.length;
+      }
+      
+      setFps(currentFps);
     }
   }, [windowMs]);
 
