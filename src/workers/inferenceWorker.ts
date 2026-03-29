@@ -222,10 +222,13 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
           inputName
         );
 
-        // Transfer the mask pixel buffer for zero-copy (if it exists)
+        // Transfer the mask pixel buffer and original pixels for zero-copy
         const transfer: Transferable[] = [];
         if (result.maskPixels) {
           transfer.push(result.maskPixels.buffer);
+        }
+        if (result.originalBuffer) {
+          transfer.push(result.originalBuffer as ArrayBuffer);
         }
 
         ctx.postMessage(
@@ -236,6 +239,7 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
             maskPixels: result.maskPixels,
             maskWidth: result.maskWidth,
             maskHeight: result.maskHeight,
+            originalBuffer: result.originalBuffer,
           },
           transfer
         );
