@@ -6,83 +6,91 @@ import { getJointAngle, computeAngles } from "./angle-utils";
 import { Box } from "../utils/types";
 
 /**
+ * Snapshot of tracker state — written by the rAF-synchronized effect,
+ * read by the component to trigger UI updates via the prevSnapshot pattern.
+ */
+interface TrackerSnapshot {
+  reps: number;
+  repState: RepState;
+  currentAngle: number | null;
+  allAngles: Record<string, number>;
+  formFeedback: FormFeedbackData;
+  sessionStats: SessionStats;
+}
+
+const INITIAL_SNAPSHOT: TrackerSnapshot = {
+  reps: 0,
+  repState: "idle",
+  currentAngle: null,
+  allAngles: {},
+  formFeedback: { quality: "good", message: "Ready to start" },
+  sessionStats: { totalReps: 0, goodFormReps: 0, startTime: 0, duration: 0 },
+};
+
+/**
  * useExerciseTracker — Core fitness tracking hook.
  *
  * Consumes the `details` (Box[]) array from useImageProcessing and
  * processes keypoints through a rep-counting state machine.
  *
  * Architecture:
- * - Receives detected boxes from the existing pipeline (no worker/model interaction)
- * - Extracts keypoints from the first detected person
- * - Calculates joint angles using pure math functions
- * - Runs a state machine: idle → down → up (1 rep) → down → up (2 reps) → ...
- * - Evaluates form rules on every frame
+ * - State machine runs in refs (no React state updates during the hot path)
+ * - A useEffect synchronizes external frame data (details) into the state machine
+ * - A ref-based snapshot is compared during render using the React 19
+ *   "storing information from previous renders" pattern to batch UI updates
  *
- * @param exercise - The currently selected exercise config
- * @param details - Box[] from useImageProcessing (updated every frame)
- * @param isActive - Whether tracking is currently active (camera running)
+ * React 19 patterns used:
+ * - State reset: parent uses `key={exercise?.id}` to unmount/remount
+ * - Frame processing: useEffect writes to a ref snapshot; render compares
+ *   prev snapshot to detect changes and calls setState (pure, no impure calls)
+ *
+ * @see https://react.dev/learn/you-might-not-need-an-effect#resetting-all-state-when-a-prop-changes
+ * @see https://react.dev/reference/react/useState#storing-information-from-previous-renders
  */
 export function useExerciseTracker(
   exercise: Exercise | null,
   details: Box[],
   isActive: boolean
 ) {
-  const [reps, setReps] = useState(0);
-  const [repState, setRepState] = useState<RepState>("idle");
-  const [currentAngle, setCurrentAngle] = useState<number | null>(null);
-  const [allAngles, setAllAngles] = useState<Record<string, number>>({});
-  const [formFeedback, setFormFeedback] = useState<FormFeedbackData>({
-    quality: "good",
-    message: "Ready to start",
-  });
-  const [sessionStats, setSessionStats] = useState<SessionStats>({
-    totalReps: 0,
-    goodFormReps: 0,
-    startTime: 0,
-    duration: 0,
-  });
+  // ── UI state (what the component renders) ──
+  const [snapshot, setSnapshot] = useState<TrackerSnapshot>(INITIAL_SNAPSHOT);
 
-  // Refs for state machine (avoid stale closures in the hot loop)
+  // ── Refs for the state machine (mutated in effect, read during render) ──
   const repStateRef = useRef<RepState>("idle");
   const repsRef = useRef(0);
   const goodFormRepsRef = useRef(0);
   const startTimeRef = useRef(0);
   const lastFormRef = useRef<FormFeedbackData>({ quality: "good", message: "Ready to start" });
 
-  // Throttle state updates to avoid re-render storms during real-time tracking
+  // Throttle UI updates to ~12/sec
   const lastUpdateRef = useRef(0);
-  const UPDATE_INTERVAL_MS = 80; // ~12 UI updates/sec (smooth enough, non-blocking)
+  const UPDATE_INTERVAL_MS = 80;
+
+  // Snapshot ref for the render comparison
+  const snapshotRef = useRef<TrackerSnapshot>(INITIAL_SNAPSHOT);
 
   /**
-   * Reset the tracker for a new session / exercise change.
+   * Reset the tracker for a new session (called by "Reset Session" button).
+   * Note: Exercise change resets are handled by parent using key={exercise?.id}
+   * which unmounts/remounts this hook, resetting all state automatically.
    */
   const reset = useCallback(() => {
-    setReps(0);
-    setRepState("idle");
-    setCurrentAngle(null);
-    setAllAngles({});
-    setFormFeedback({ quality: "good", message: "Ready to start" });
-    setSessionStats({ totalReps: 0, goodFormReps: 0, startTime: 0, duration: 0 });
-
     repStateRef.current = "idle";
     repsRef.current = 0;
     goodFormRepsRef.current = 0;
     startTimeRef.current = 0;
     lastFormRef.current = { quality: "good", message: "Ready to start" };
+    lastUpdateRef.current = 0;
+    snapshotRef.current = INITIAL_SNAPSHOT;
+    setSnapshot(INITIAL_SNAPSHOT);
   }, []);
 
-  // Reset when exercise changes
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    reset();
-  }, [exercise?.id, reset]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
   /**
-   * Process a frame's detections.
-   * Called on every render when `details` changes and tracking is active.
+   * Process frame detections — runs as an effect that syncs external
+   * inference data (details from the worker) into the internal state machine.
+   * Only mutates refs (pure from React's perspective). UI updates are
+   * batched into a snapshot ref and picked up during the next render.
    */
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!exercise || !isActive || details.length === 0) return;
 
@@ -90,24 +98,23 @@ export function useExerciseTracker(
     const person = details.find(
       (box) => box.keypoints && box.keypoints.length === 17
     );
-    if (!person || !person.keypoints) return;
+    if (!person?.keypoints) return;
 
     const keypoints = person.keypoints as Keypoint[];
 
     // ── Calculate primary angle ──
     const primaryAngle = getJointAngle(keypoints, exercise.primaryJoint);
-    if (primaryAngle === null) return; // Primary joint not visible
+    if (primaryAngle === null) return;
 
     // ── Calculate all tracked angles ──
     const allJoints = [exercise.primaryJoint, ...(exercise.secondaryJoints ?? [])];
     const angles = computeAngles(keypoints, allJoints);
 
-    // ── Rep counting state machine ──
+    // ── Rep counting state machine (ref-only, no setState) ──
     const prevState = repStateRef.current;
     let newState = prevState;
 
     if (prevState === "idle") {
-      // Start tracking once we see the person in "up" position
       if (primaryAngle >= exercise.repThresholds.up) {
         newState = "up";
         if (startTimeRef.current === 0) {
@@ -115,17 +122,13 @@ export function useExerciseTracker(
         }
       }
     } else if (prevState === "up") {
-      // Transition to "down" when angle drops below threshold
       if (primaryAngle <= exercise.repThresholds.down) {
         newState = "down";
       }
     } else if (prevState === "down") {
-      // Transition back to "up" = 1 complete rep
       if (primaryAngle >= exercise.repThresholds.up) {
         newState = "up";
         repsRef.current += 1;
-
-        // Check if form was good during this rep
         if (lastFormRef.current.quality === "good") {
           goodFormRepsRef.current += 1;
         }
@@ -146,49 +149,49 @@ export function useExerciseTracker(
         (rule.max !== undefined && ruleAngle < rule.max && ruleAngle > 0);
 
       if (violated) {
-        currentForm = {
-          quality: rule.severity,
-          message: rule.message,
-        };
-        break; // Show the first (most severe) violation
+        currentForm = { quality: rule.severity, message: rule.message };
+        break;
       }
     }
 
     lastFormRef.current = currentForm;
 
-    // ── Throttled state updates ──
+    // ── Throttled snapshot update (ref only — no setState in effect) ──
     const now = performance.now();
     if (now - lastUpdateRef.current >= UPDATE_INTERVAL_MS) {
       lastUpdateRef.current = now;
-
-      // Batched state sync from external frame data — intentional
-      setCurrentAngle(primaryAngle);
-      setAllAngles(angles);
-      setRepState(newState);
-      setReps(repsRef.current);
-      setFormFeedback(currentForm);
 
       const elapsed = startTimeRef.current > 0
         ? Math.floor((now - startTimeRef.current) / 1000)
         : 0;
 
-      setSessionStats({
-        totalReps: repsRef.current,
-        goodFormReps: goodFormRepsRef.current,
-        startTime: startTimeRef.current,
-        duration: elapsed,
-      });
+      // Write new snapshot to ref — will be picked up next render
+      snapshotRef.current = {
+        reps: repsRef.current,
+        repState: newState,
+        currentAngle: primaryAngle,
+        allAngles: angles,
+        formFeedback: currentForm,
+        sessionStats: {
+          totalReps: repsRef.current,
+          goodFormReps: goodFormRepsRef.current,
+          startTime: startTimeRef.current,
+          duration: elapsed,
+        },
+      };
+
+      // Schedule a re-render to pick up the new snapshot
+      setSnapshot(snapshotRef.current);
     }
-    // eslint-enable react-hooks/set-state-in-effect
   }, [details, exercise, isActive]);
 
   return {
-    reps,
-    repState,
-    currentAngle,
-    allAngles,
-    formFeedback,
-    sessionStats,
+    reps: snapshot.reps,
+    repState: snapshot.repState,
+    currentAngle: snapshot.currentAngle,
+    allAngles: snapshot.allAngles,
+    formFeedback: snapshot.formFeedback,
+    sessionStats: snapshot.sessionStats,
     reset,
   };
 }
