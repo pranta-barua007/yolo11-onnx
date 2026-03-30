@@ -153,7 +153,7 @@ export default function FormCheckCamera({
       </aside>
 
       {/* ── Main Camera Area ── */}
-      <section className="lg:col-span-10 flex flex-col gap-2 order-1 lg:order-2 min-h-[400px]">
+      <section className="lg:col-span-10 flex flex-col gap-2 order-1 lg:order-2">
         {/* Inline status — no container */}
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
@@ -202,7 +202,7 @@ export default function FormCheckCamera({
         </div>
 
         {/* Camera viewport — uses same pattern as home page MediaArea */}
-        <div className="relative flex-1 min-h-0 overflow-hidden bg-transparent flex items-center justify-center">
+        <div className="relative flex-1 min-h-[540px] min-h-0 overflow-hidden bg-transparent flex items-center justify-center">
           {/* Hidden inference canvas */}
           <canvas ref={inputCanvasRef} className="hidden" />
 
@@ -248,7 +248,7 @@ export default function FormCheckCamera({
                 <video
                   ref={cameraRef}
                   className="rounded-lg shadow-sm block"
-                  style={{ maxHeight: 'calc(100vh - 13rem)', maxWidth: '100%' }}
+                  style={{ maxHeight: 'calc(100vh - 8rem)', maxWidth: '100%' }}
                   onLoadedData={handleCameraLoad}
                   autoPlay
                   playsInline
