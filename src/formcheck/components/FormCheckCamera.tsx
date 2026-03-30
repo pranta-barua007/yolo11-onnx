@@ -105,7 +105,7 @@ export default function FormCheckCamera({
   }, [refreshCameras]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4" style={{ height: "calc(100vh - 6.5rem)" }}>
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 lg:h-[calc(100vh-6.5rem)]">
       {/* ── Left Sidebar: Branding + Exercise picker + Stats ── */}
       <aside className="lg:col-span-2 space-y-3 order-2 lg:order-1 overflow-y-auto scrollbar-none">
         {/* Branding */}
@@ -153,7 +153,7 @@ export default function FormCheckCamera({
       </aside>
 
       {/* ── Main Camera Area ── */}
-      <section className="lg:col-span-10 flex flex-col gap-2 order-1 lg:order-2">
+      <section className="lg:col-span-10 flex flex-col gap-2 order-1 lg:order-2 min-h-[400px]">
         {/* Inline status — no container */}
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
@@ -201,14 +201,14 @@ export default function FormCheckCamera({
           </div>
         </div>
 
-        {/* Camera viewport */}
-        <div className="relative flex-1 rounded-xl border border-border/40 bg-card overflow-hidden flex items-center justify-center">
+        {/* Camera viewport — uses same pattern as home page MediaArea */}
+        <div className="relative flex-1 min-h-0 overflow-hidden bg-transparent flex items-center justify-center">
           {/* Hidden inference canvas */}
           <canvas ref={inputCanvasRef} className="hidden" />
 
           {/* Loading state */}
           {!isModelLoaded && (
-            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-background/80 backdrop-blur-md gap-3">
+            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-background/80 backdrop-blur-md gap-3 rounded-xl">
               <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               <span className="text-sm font-medium text-foreground">{modelStatus}</span>
             </div>
@@ -216,7 +216,7 @@ export default function FormCheckCamera({
 
           {/* Camera not started */}
           {isModelLoaded && !cameraStream && (
-            <div className="flex flex-col items-center gap-4 p-8 text-center">
+            <div className="flex flex-col items-center gap-4 p-8 text-center rounded-xl border border-border/40 bg-card">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
                 <svg className="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
@@ -241,35 +241,38 @@ export default function FormCheckCamera({
             </div>
           )}
 
-          {/* Active camera feed — fills container */}
+          {/* Active camera feed — same inline-block pattern as home page */}
           {cameraStream && (
-            <>
-              <video
-                ref={cameraRef}
-                className="absolute inset-0 w-full h-full object-contain"
-                onLoadedData={handleCameraLoad}
-                autoPlay
-                playsInline
-                muted
-              />
+            <div className="absolute inset-1 sm:inset-3 md:inset-4 flex justify-center items-center pointer-events-none">
+              <div className="relative inline-block pointer-events-auto leading-none">
+                <video
+                  ref={cameraRef}
+                  className="rounded-lg shadow-sm block"
+                  style={{ maxHeight: 'calc(100vh - 13rem)', maxWidth: '100%' }}
+                  onLoadedData={handleCameraLoad}
+                  autoPlay
+                  playsInline
+                  muted
+                />
 
-              {/* Overlay canvas */}
-              <canvas
-                ref={overlayRef}
-                className="absolute inset-0 w-full h-full pointer-events-none"
-              />
+                {/* Overlay canvas — sized to match video exactly */}
+                <canvas
+                  ref={overlayRef}
+                  className="absolute inset-0 w-full h-full pointer-events-none rounded-lg"
+                />
 
-              {/* Angle arcs drawn on top */}
-              <AngleOverlay
-                overlayRef={overlayRef}
-                details={details}
-                exercise={exercise}
-              />
+                {/* Angle arcs drawn on top */}
+                <AngleOverlay
+                  overlayRef={overlayRef}
+                  details={details}
+                  exercise={exercise}
+                />
+              </div>
 
-              {/* Stop button */}
+              {/* Stop button — anchored to parent container */}
               <button
                 onClick={handleCameraToggle}
-                className="absolute top-2 right-2 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-destructive/25 border border-transparent hover:bg-destructive/20 hover:border-destructive/30 text-destructive/40 hover:text-destructive transition-all duration-300 backdrop-blur-sm"
+                className="absolute top-0 right-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-destructive/25 border border-transparent hover:bg-destructive/20 hover:border-destructive/30 text-destructive/40 hover:text-destructive transition-all duration-300 pointer-events-auto backdrop-blur-sm md:top-2 md:right-2"
                 aria-label="Stop Camera"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -277,7 +280,7 @@ export default function FormCheckCamera({
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
-            </>
+            </div>
           )}
         </div>
       </section>
