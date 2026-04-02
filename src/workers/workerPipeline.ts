@@ -99,41 +99,51 @@ export async function workerInferencePipeline(
   blob.delete();
 
   const start = performance.now();
-  const output = await session.run({ [inputName]: input_tensor });
-  const end = performance.now();
-  input_tensor.dispose();
+  let output: ort.InferenceSession.OnnxValueMapType | null = null;
+  let end = start;
+  let rawOutput0: ort.Tensor | null = null;
+  let rawOutput1: ort.Tensor | null = null;
 
-  const outputNames = session.outputNames;
-  const rawOutput0 = output[outputNames[0]];
-  const rawOutput1 = outputNames.length > 1 ? output[outputNames[1]] : null;
-
-  if (!rawOutput0) {
-    if (rawOutput1) rawOutput1.dispose();
-    return { boxes: [], inferenceTime: "0", maskPixels: null, maskWidth: 0, maskHeight: 0, originalBuffer: pixels.buffer };
-  }
-
-  // ── Restore Precision ──
-  const predictionsData = hydratePrecision(rawOutput0.data as Float32Array || rawOutput0.data as Uint16Array);
-  
+  // Read these out before finally disposes the tensors
+  let predictionsData: Float32Array = new Float32Array(0);
   let proto_mask: Float32Array | null = null;
   let MASK_CHANNELS = 0, MASK_HEIGHT = 0, MASK_WIDTH = 0;
-  
-  if (rawOutput1) {
-    proto_mask = hydratePrecision(rawOutput1.data as Float32Array || rawOutput1.data as Uint16Array);
-    MASK_CHANNELS = rawOutput1.dims[1];
-    MASK_HEIGHT = rawOutput1.dims[2];
-    MASK_WIDTH = rawOutput1.dims[3];
+  let NUM_PREDICTIONS = 0, NUM_SCORES = 0, NUM_CHANNELS = 0, NUM_MASK_WEIGHTS = 0;
+  let isSegmentation = false;
+
+  try {
+    output = await session.run({ [inputName]: input_tensor });
+    end = performance.now();
+
+    const outputNames = session.outputNames;
+    rawOutput0 = (output[outputNames[0]] as ort.Tensor) ?? null;
+    rawOutput1 = outputNames.length > 1 ? (output[outputNames[1]] as ort.Tensor) ?? null : null;
+
+    if (!rawOutput0) {
+      return { boxes: [], inferenceTime: "0", maskPixels: null, maskWidth: 0, maskHeight: 0, originalBuffer: pixels.buffer };
+    }
+
+    // ── Restore Precision — read data while tensors are still alive ──
+    predictionsData = hydratePrecision(rawOutput0.data as Float32Array || rawOutput0.data as Uint16Array);
+
+    if (rawOutput1) {
+      proto_mask = hydratePrecision(rawOutput1.data as Float32Array || rawOutput1.data as Uint16Array);
+      MASK_CHANNELS = rawOutput1.dims[1];
+      MASK_HEIGHT = rawOutput1.dims[2];
+      MASK_WIDTH = rawOutput1.dims[3];
+    }
+
+    NUM_PREDICTIONS = rawOutput0.dims[2];
+    const activeClasses = config.classes ?? DEFAULT_CLASSES;
+    NUM_SCORES = activeClasses.length;
+    NUM_CHANNELS = rawOutput0.dims[1];
+    NUM_MASK_WEIGHTS = Math.max(0, NUM_CHANNELS - (4 + NUM_SCORES));
+    isSegmentation = config.capabilities ? config.capabilities.includes("S") : (!!rawOutput1 && rawOutput1.dims.length === 4 && NUM_MASK_WEIGHTS > 0);
+  } finally {
+    input_tensor.dispose();
+    rawOutput0?.dispose();
+    rawOutput1?.dispose();
   }
-
-  const NUM_PREDICTIONS = rawOutput0.dims[2];
-  const activeClasses = config.classes ?? DEFAULT_CLASSES;
-  const NUM_SCORES = activeClasses.length;
-  const NUM_CHANNELS = rawOutput0.dims[1];
-  const NUM_MASK_WEIGHTS = Math.max(0, NUM_CHANNELS - (4 + NUM_SCORES)); 
-  const isSegmentation = config.capabilities ? config.capabilities.includes("S") : (rawOutput1 && rawOutput1.dims.length === 4 && NUM_MASK_WEIGHTS > 0);
-
-  rawOutput0.dispose();
-  if (rawOutput1) rawOutput1.dispose();
 
   const xRatio = overlayW / modelW;
   const yRatio = overlayH / modelH;
