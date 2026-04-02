@@ -3,14 +3,7 @@
 import { useState, useRef, useCallback, MutableRefObject, RefObject } from "react";
 import { draw_bounding_boxes } from "../utils/draw_bounding_boxes";
 import { Box } from "../utils/types";
-
-interface Config {
-  input_shape: number[];
-  iou_threshold: number;
-  score_threshold: number;
-  classes?: string[];
-  capabilities?: ("D" | "S" | "P" | "Q")[];
-}
+import { Config } from "../utils/model_config";
 
 /** Minimal box type returned by the worker (no mask_weights needed on main thread) */
 interface WorkerBox {

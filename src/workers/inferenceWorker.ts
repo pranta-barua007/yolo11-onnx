@@ -2,6 +2,7 @@ import * as ort from "onnxruntime-web";
 import { workerInferencePipeline } from "./workerPipeline";
 import { getModelFromCache, putModelInCache, deleteModelFromCache } from "../utils/model_cache";
 import { ensurePrecision } from "../utils/precision";
+import { Config } from "../utils/model_config";
 
 // ── Worker-global state ──
 let session: ort.InferenceSession | null = null;
@@ -14,12 +15,7 @@ export interface LoadModelMessage {
   type: "load-model";
   device: string;
   modelPath: string;
-  config: {
-    input_shape: number[];
-    iou_threshold: number;
-    score_threshold: number;
-    classes?: string[];
-  };
+  config: Config;
   forceReload?: boolean;
 }
 
@@ -30,12 +26,7 @@ export interface RunInferenceMessage {
   srcHeight: number;
   overlayWidth: number;
   overlayHeight: number;
-  config: {
-    input_shape: number[];
-    iou_threshold: number;
-    score_threshold: number;
-    classes?: string[];
-  };
+  config: Config;
 }
 
 export interface ReleaseMessage {

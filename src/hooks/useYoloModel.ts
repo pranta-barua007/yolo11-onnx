@@ -10,12 +10,17 @@ import {
   addCustomModelMetadata,
   removeCustomModelMetadata,
 } from "../utils/model_cache";
+import {
+  Config,
+  ModelCapability,
+  DEFAULT_INPUT_SHAPE,
+  DEFAULT_IOU_THRESHOLD,
+  DEFAULT_SCORE_THRESHOLD,
+} from "../utils/model_config";
 import defaultClasses from "../utils/yolo_classes.json";
 import { BASE_PATH } from "../utils/paths";
 
-const input_shape = [1, 3, 640, 640];
-const iou_threshold = 0.25;
-const DEFAULT_SCORE_THRESHOLD = 0.55;
+
 
 /**
  * Manages the YOLO model lifecycle via Web Worker.
@@ -62,13 +67,13 @@ export function useYoloModel(initialModelName: string = "yolo11n-seg") {
   const activeCapabilities = (() => {
     const customModel = customModels.find((m) => m.url === modelName);
     if (customModel) return customModel.capabilities;
-    if (modelName.includes("pose")) return ["D", "P"] as ("D" | "S" | "P" | "Q")[];
-    if (modelName.includes("seg")) return ["D", "S"] as ("D" | "S" | "P" | "Q")[];
-    if (modelName === "yolo11s") return ["D", "Q"] as ("D" | "S" | "P" | "Q")[];
-    return ["D"] as ("D" | "S" | "P" | "Q")[];
+    if (modelName.includes("pose")) return ["D", "P"] as ModelCapability[];
+    if (modelName.includes("seg")) return ["D", "S"] as ModelCapability[];
+    if (modelName === "yolo11s") return ["D", "Q"] as ModelCapability[];
+    return ["D"] as ModelCapability[];
   })();
 
-  const config = { input_shape, iou_threshold, score_threshold: scoreThreshold, classes: activeClasses, capabilities: activeCapabilities };
+  const config: Config = { input_shape: DEFAULT_INPUT_SHAPE, iou_threshold: DEFAULT_IOU_THRESHOLD, score_threshold: scoreThreshold, classes: activeClasses, capabilities: activeCapabilities };
 
   // Track whether a load is already in-flight
   const loadingRef = useRef<boolean>(false);

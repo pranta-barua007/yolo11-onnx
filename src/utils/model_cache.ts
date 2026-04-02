@@ -1,3 +1,5 @@
+import { ModelCapability } from "./model_config";
+
 /**
  * Browser-side ONNX model cache.
  *
@@ -66,7 +68,7 @@ export interface CachedCustomModel {
   classes: string[];
   /** Cache key used to retrieve bytes from Cache API. */
   cacheKey: string;
-  capabilities?: ("D" | "S" | "P" | "Q")[];
+  capabilities?: ModelCapability[];
 }
 
 /** Load persisted custom model metadata from localStorage. */

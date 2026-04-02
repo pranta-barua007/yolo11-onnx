@@ -1,4 +1,5 @@
 import * as ort from "onnxruntime-web";
+import { DEFAULT_INPUT_SHAPE, ModelCapability } from "../utils/model_config";
 
 self.onmessage = async (e: MessageEvent) => {
   const { buffer, classesConfig } = e.data;
@@ -21,13 +22,14 @@ self.onmessage = async (e: MessageEvent) => {
     // We need to run a tiny 1x1 dummy to inspect the output dimensions,
     // since ONNXRuntime-Web doesn't publicly expose getOutputMetadata without running it.
     // Assuming standard 640x640 base size to avoid dynamic shape errors
-    const dummy = new ort.Tensor("float32", new Float32Array(1 * 3 * 640 * 640), [1, 3, 640, 640]);
+    const [batch, channels, height, width] = DEFAULT_INPUT_SHAPE;
+    const dummy = new ort.Tensor("float32", new Float32Array(batch * channels * height * width), DEFAULT_INPUT_SHAPE);
     const warmupOutput = await session.run({ [inputName]: dummy });
 
     const output0 = warmupOutput[outputNames[0]];
     const output1 = outputNames.length > 1 ? warmupOutput[outputNames[1]] : null;
     
-    const capabilities: ("D" | "S" | "P" | "Q")[] = ["D"]; // YOLO base
+    const capabilities: ModelCapability[] = ["D"]; // YOLO base
     
     // Check if input is FP16
     const sessionWithMeta = session as unknown as { inputMetadata: Record<string, { type: string }> };

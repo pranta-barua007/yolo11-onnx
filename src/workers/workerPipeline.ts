@@ -17,14 +17,7 @@ import cv from "@techstark/opencv-js";
 import { applyNMS, extractDetections, extractPoseDetections } from "../utils/img_preprocess";
 import { generateMaskOverlay } from "../utils/mask_processing";
 import { ensurePrecision, hydratePrecision } from "../utils/precision";
-
-interface Config {
-  input_shape: number[];
-  iou_threshold: number;
-  score_threshold: number;
-  classes?: string[];
-  capabilities?: ("D" | "S" | "P" | "Q")[];
-}
+import { Config } from "../utils/model_config";
 
 interface WorkerBox {
   bbox: number[];

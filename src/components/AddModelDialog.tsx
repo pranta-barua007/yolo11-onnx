@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, FileJson, X, Plus, AlertCircle, CheckCircle2 } from "lucide-react";
 import { CustomModel } from "@/utils/types";
+import { ModelCapability } from "@/utils/model_config";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface AddModelDialogProps {
@@ -136,7 +137,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
       const buffer = await modelFile.arrayBuffer();
 
       // Perform non-blocking structural validation via Web Worker
-      const capabilities = await new Promise<("D" | "S" | "P" | "Q")[]>((resolve, reject) => {
+      const capabilities = await new Promise<ModelCapability[]>((resolve, reject) => {
         const worker = new Worker(new URL("../workers/validationWorker.ts", import.meta.url), { type: "module" });
         worker.onmessage = (e) => {
           if (e.data.status === "success") {
@@ -157,7 +158,7 @@ export default function AddModelDialog({ open, onOpenChange, onAddModel }: AddMo
 
       const cacheKey = `custom:${modelFile.name.replace(".onnx", "")}`;
 
-      const finalCaps = Array.from(new Set([...capabilities, ...manualCaps])) as ("D" | "S" | "P" | "Q")[];
+      const finalCaps = Array.from(new Set([...capabilities, ...manualCaps])) as ModelCapability[];
 
       onAddModel({
         name: modelFile.name.replace(".onnx", ""),

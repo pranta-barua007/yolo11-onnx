@@ -12,8 +12,9 @@ import {
 } from "@/components/ui/select";
 import { useMediaDisplay } from "./MediaDisplayContext";
 import AddModelDialog from "../AddModelDialog";
+import { ModelCapability } from "@/utils/model_config";
 
-function CapabilityBadges({ capabilities = [] }: { capabilities?: ("D" | "S" | "P" | "Q")[] }) {
+function CapabilityBadges({ capabilities = [] }: { capabilities?: ModelCapability[] }) {
   if (!capabilities.length) return null;
   
   const colors = {

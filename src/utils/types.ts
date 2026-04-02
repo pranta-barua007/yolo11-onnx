@@ -1,3 +1,5 @@
+import { ModelCapability } from "./model_config";
+
 export interface Box {
   bbox: number[];
   class_idx: number;
@@ -10,5 +12,5 @@ export interface CustomModel {
   name: string;
   url: string;
   classes: string[];
-  capabilities?: ("D" | "S" | "P" | "Q")[];
+  capabilities?: ModelCapability[];
 }
