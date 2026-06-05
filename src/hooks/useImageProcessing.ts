@@ -76,15 +76,14 @@ export function useImageProcessing() {
   const openImageRef = useRef<HTMLInputElement>(null);
   const maskSnapshotRef = useRef<ImageData | null>(null);
 
-  // Keep track of the active camera listener and worker to clean it up reliably
-  const cameraListenerRef = useRef<((e: MessageEvent) => void) | null>(null);
-  const activeWorkerRef = useRef<Worker | null>(null);
-
   // ── Worker back-pressure flag ──
   const workerBusyRef = useRef<boolean>(false);
 
   // ── Camera animation frame ID for cleanup ──
   const cameraRafRef = useRef<number | null>(null);
+
+  // ── Active camera processing loop cleanup function ──
+  const cameraCleanupRef = useRef<(() => void) | null>(null);
 
   // ── Reusable pixel buffer for GC reduction ──
   // Pre-allocated buffer dimensions — reset when canvas size changes.
@@ -204,6 +203,12 @@ export function useImageProcessing() {
     const inputCtx = inputCanvasRef.current.getContext("2d", { willReadFrequently: true });
     if (!inputCtx) return;
 
+    // Clean up any existing camera loop before starting a new one
+    if (cameraCleanupRef.current) {
+      cameraCleanupRef.current();
+      cameraCleanupRef.current = null;
+    }
+
     const videoW = cameraRef.current.videoWidth;
     const videoH = cameraRef.current.videoHeight;
     inputCtx.canvas.width = videoW;
@@ -211,17 +216,11 @@ export function useImageProcessing() {
     overlayRef.current.width = videoW;
     overlayRef.current.height = videoH;
 
-    // Clean up any existing camera listener before starting new stream
-    if (activeWorkerRef.current && cameraListenerRef.current) {
-      activeWorkerRef.current.removeEventListener("message", cameraListenerRef.current);
-    }
-
     const worker = workerRef.current;
     if (!worker) {
       console.error("[processCamera] No worker available");
       return;
     }
-    activeWorkerRef.current = worker;
 
     // ── Worker message handler for inference results ──
     const handleWorkerMessage = (e: MessageEvent) => {
@@ -244,33 +243,48 @@ export function useImageProcessing() {
       onFrameTick?.();
     };
 
-    cameraListenerRef.current = handleWorkerMessage;
     worker.addEventListener("message", handleWorkerMessage);
 
     // ── requestAnimationFrame loop ──
     const processFrame = () => {
       if (!cameraRef.current || !cameraRef.current.srcObject) {
-        if (activeWorkerRef.current && cameraListenerRef.current) {
-          activeWorkerRef.current.removeEventListener("message", cameraListenerRef.current);
-          cameraListenerRef.current = null;
+        if (cameraCleanupRef.current) {
+          cameraCleanupRef.current();
+          cameraCleanupRef.current = null;
         }
         return;
       }
 
+      // Check if camera stream resolution changed (e.g. orientation swap)
+      const currentW = cameraRef.current.videoWidth;
+      const currentH = cameraRef.current.videoHeight;
+
+      if (currentW > 0 && currentH > 0 && (currentW !== inputCtx.canvas.width || currentH !== inputCtx.canvas.height)) {
+        console.log(`[processCamera] Video dimensions changed: ${inputCtx.canvas.width}x${inputCtx.canvas.height} -> ${currentW}x${currentH}`);
+        inputCtx.canvas.width = currentW;
+        inputCtx.canvas.height = currentH;
+        if (overlayRef.current) {
+          overlayRef.current.width = currentW;
+          overlayRef.current.height = currentH;
+        }
+        pixelBufferRef.current = null;
+      }
+
+      const activeW = inputCtx.canvas.width;
+      const activeH = inputCtx.canvas.height;
+
       // Draw video frame to input canvas (~0.5ms)
-      inputCtx.drawImage(cameraRef.current, 0, 0, videoW, videoH);
+      inputCtx.drawImage(cameraRef.current, 0, 0, activeW, activeH);
 
       // Only send to worker if it's NOT busy (back-pressure)
       if (!workerBusyRef.current && workerReadyRef.current) {
         workerBusyRef.current = true;
 
         // Get pixel data from canvas
-        const imageData = inputCtx.getImageData(0, 0, videoW, videoH);
+        const imageData = inputCtx.getImageData(0, 0, activeW, activeH);
 
         // Copy into reusable buffer to reduce GC pressure.
-        // The original imageData.data gets GC'd but the heavy pixel
-        // allocation is amortized via the reusable buffer.
-        const reusablePixels = getPixelBuffer(videoW, videoH);
+        const reusablePixels = getPixelBuffer(activeW, activeH);
         reusablePixels.set(imageData.data);
 
         // Send copy to worker — transfer the reusable buffer
@@ -278,21 +292,29 @@ export function useImageProcessing() {
           {
             type: "run-inference",
             pixels: reusablePixels,
-            srcWidth: videoW,
-            srcHeight: videoH,
-            overlayWidth: videoW,
-            overlayHeight: videoH,
+            srcWidth: activeW,
+            srcHeight: activeH,
+            overlayWidth: activeW,
+            overlayHeight: activeH,
             config,
           },
           [reusablePixels.buffer]
         );
-
-        // Buffer was successfully transferred and will be returned by the worker
-        // so we DO NOT null it out here. We wait for the worker to bounce it back.
       }
 
       cameraRafRef.current = requestAnimationFrame(processFrame);
     };
+
+    // Store cleanup function in ref
+    const cleanup = () => {
+      if (cameraRafRef.current !== null) {
+        cancelAnimationFrame(cameraRafRef.current);
+        cameraRafRef.current = null;
+      }
+      worker.removeEventListener("message", handleWorkerMessage);
+      workerBusyRef.current = false;
+    };
+    cameraCleanupRef.current = cleanup;
 
     processFrame();
   };
@@ -301,15 +323,9 @@ export function useImageProcessing() {
    * Stop the camera processing loop.
    */
   const stopCameraProcessing = useCallback(() => {
-    if (cameraRafRef.current !== null) {
-      cancelAnimationFrame(cameraRafRef.current);
-      cameraRafRef.current = null;
-    }
-    workerBusyRef.current = false;
-
-    if (activeWorkerRef.current && cameraListenerRef.current) {
-      activeWorkerRef.current.removeEventListener("message", cameraListenerRef.current);
-      cameraListenerRef.current = null;
+    if (cameraCleanupRef.current) {
+      cameraCleanupRef.current();
+      cameraCleanupRef.current = null;
     }
   }, []);
 
