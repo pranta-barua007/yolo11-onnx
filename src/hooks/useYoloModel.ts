@@ -22,6 +22,29 @@ import { BASE_PATH } from "../utils/paths";
 
 
 
+
+// Shared module-scoped worker resources to avoid WebGPU context contention on navigation/double-mount
+let sharedWorker: Worker | null = null;
+const activeListeners = new Set<(e: MessageEvent) => void>();
+const activeErrorListeners = new Set<(error: ErrorEvent) => void>();
+
+function getSharedWorker(): Worker | null {
+  if (typeof window === "undefined") return null;
+  if (!sharedWorker) {
+    sharedWorker = new Worker(
+      new URL("../workers/inferenceWorker.ts", import.meta.url),
+      { type: "module" }
+    );
+    sharedWorker.onmessage = (e: MessageEvent) => {
+      activeListeners.forEach((listener) => listener(e));
+    };
+    sharedWorker.onerror = (e: ErrorEvent) => {
+      activeErrorListeners.forEach((listener) => listener(e));
+    };
+  }
+  return sharedWorker;
+}
+
 /**
  * Manages the YOLO model lifecycle via Web Worker.
  *
@@ -78,46 +101,6 @@ export function useYoloModel(initialModelName: string = "yolo11n-seg") {
   // Track whether a load is already in-flight
   const loadingRef = useRef<boolean>(false);
 
-  /** Initialize the inference worker (call once on mount) */
-  const initWorker = useCallback(() => {
-    if (workerRef.current) return;
-
-    const worker = new Worker(
-      new URL("../workers/inferenceWorker.ts", import.meta.url),
-      { type: "module" }
-    );
-
-    worker.onmessage = (e: MessageEvent) => {
-      const msg = e.data;
-      if (msg.type === "model-status") {
-        if (msg.status === "Model loaded") {
-          workerReadyRef.current = true;
-          setWarmUpTime(msg.warmUpTime);
-          setModelStatus("Model loaded");
-          setIsModelLoaded(true);
-          loadingRef.current = false;
-
-        } else if (msg.status === "webgpu-failed") {
-          console.warn("[useYoloModel] WebGPU failed in worker, falling back to WASM...");
-          loadingRef.current = false;
-          setDevice("wasm"); // triggers re-load via effect
-        } else if (msg.status === "Model loading failed") {
-          console.error("[useYoloModel] Worker model loading failed:", msg.error);
-          setModelStatus("Model loading failed");
-          loadingRef.current = false;
-        } else {
-          setModelStatus(msg.status);
-        }
-      }
-    };
-
-    worker.onerror = (error) => {
-      console.error("[useYoloModel] Worker error:", error);
-      loadingRef.current = false;
-    };
-
-    workerRef.current = worker;
-  }, []);
 
   /** Resolve model path — built-in uses /models/ URL, custom uses cache key directly. */
   const resolveModelPath = useCallback((name: string): string => {
@@ -221,17 +204,49 @@ export function useYoloModel(initialModelName: string = "yolo11n-seg") {
     setModelName((prev) => (prev === url ? "yolo11n-seg" : prev));
   }, []);
 
-  // Initialize worker on mount
+  // Register listeners on mount/unmount and keep workerRef up to date
   useEffect(() => {
-    initWorker();
-    return () => {
-      if (workerRef.current) {
-        workerRef.current.postMessage({ type: "release" });
-        workerRef.current.terminate();
-        workerRef.current = null;
+    const worker = getSharedWorker();
+    if (!worker) return;
+
+    workerRef.current = worker;
+
+    const handleMessage = (e: MessageEvent) => {
+      const msg = e.data;
+      if (msg.type === "model-status") {
+        if (msg.status === "Model loaded") {
+          workerReadyRef.current = true;
+          setWarmUpTime(msg.warmUpTime);
+          setModelStatus("Model loaded");
+          setIsModelLoaded(true);
+          loadingRef.current = false;
+        } else if (msg.status === "webgpu-failed") {
+          console.warn("[useYoloModel] WebGPU failed in worker, falling back to WASM...");
+          loadingRef.current = false;
+          setDevice("wasm"); // triggers re-load via effect
+        } else if (msg.status === "Model loading failed") {
+          console.error("[useYoloModel] Worker model loading failed:", msg.error);
+          setModelStatus("Model loading failed");
+          loadingRef.current = false;
+        } else {
+          setModelStatus(msg.status);
+        }
       }
     };
-  }, [initWorker]);
+
+    const handleError = (error: ErrorEvent) => {
+      console.error("[useYoloModel] Worker error:", error);
+      loadingRef.current = false;
+    };
+
+    activeListeners.add(handleMessage);
+    activeErrorListeners.add(handleError);
+
+    return () => {
+      activeListeners.delete(handleMessage);
+      activeErrorListeners.delete(handleError);
+    };
+  }, [device, modelName]);
 
   // Load model when device/modelName/customModels change
   useEffect(() => {

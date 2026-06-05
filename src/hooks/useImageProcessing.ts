@@ -76,6 +76,10 @@ export function useImageProcessing() {
   const openImageRef = useRef<HTMLInputElement>(null);
   const maskSnapshotRef = useRef<ImageData | null>(null);
 
+  // Keep track of the active camera listener and worker to clean it up reliably
+  const cameraListenerRef = useRef<((e: MessageEvent) => void) | null>(null);
+  const activeWorkerRef = useRef<Worker | null>(null);
+
   // ── Worker back-pressure flag ──
   const workerBusyRef = useRef<boolean>(false);
 
@@ -207,11 +211,17 @@ export function useImageProcessing() {
     overlayRef.current.width = videoW;
     overlayRef.current.height = videoH;
 
+    // Clean up any existing camera listener before starting new stream
+    if (activeWorkerRef.current && cameraListenerRef.current) {
+      activeWorkerRef.current.removeEventListener("message", cameraListenerRef.current);
+    }
+
     const worker = workerRef.current;
     if (!worker) {
       console.error("[processCamera] No worker available");
       return;
     }
+    activeWorkerRef.current = worker;
 
     // ── Worker message handler for inference results ──
     const handleWorkerMessage = (e: MessageEvent) => {
@@ -234,12 +244,16 @@ export function useImageProcessing() {
       onFrameTick?.();
     };
 
+    cameraListenerRef.current = handleWorkerMessage;
     worker.addEventListener("message", handleWorkerMessage);
 
     // ── requestAnimationFrame loop ──
     const processFrame = () => {
       if (!cameraRef.current || !cameraRef.current.srcObject) {
-        worker.removeEventListener("message", handleWorkerMessage);
+        if (activeWorkerRef.current && cameraListenerRef.current) {
+          activeWorkerRef.current.removeEventListener("message", cameraListenerRef.current);
+          cameraListenerRef.current = null;
+        }
         return;
       }
 
@@ -292,6 +306,11 @@ export function useImageProcessing() {
       cameraRafRef.current = null;
     }
     workerBusyRef.current = false;
+
+    if (activeWorkerRef.current && cameraListenerRef.current) {
+      activeWorkerRef.current.removeEventListener("message", cameraListenerRef.current);
+      cameraListenerRef.current = null;
+    }
   }, []);
 
   /**

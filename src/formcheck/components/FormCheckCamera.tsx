@@ -14,6 +14,13 @@ import SessionSummary from "./SessionSummary";
 import ExercisePicker from "./ExercisePicker";
 import { useFullscreen } from "../../hooks/useFullscreen";
 import FullscreenButton from "../../components/ui/FullscreenButton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 
 interface FormCheckCameraProps {
   exercise: Exercise | null;
@@ -190,17 +197,24 @@ export default function FormCheckCamera({
                   <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
                   <rect x="2" y="6" width="14" height="12" rx="2" />
                 </svg>
-                <select
+                <Select
                   value={selectedDeviceId}
-                  onChange={(e) => setSelectedDeviceId(e.target.value)}
-                  className="text-xs bg-transparent border-none text-muted-foreground cursor-pointer pr-4"
+                  onValueChange={setSelectedDeviceId}
+                  onOpenChange={(open) => {
+                    if (open) refreshCameras(true);
+                  }}
                 >
-                  {cameras.map((cam) => (
-                    <option key={cam.deviceId} value={cam.deviceId}>
-                      {cam.label || `Camera ${cam.deviceId.slice(0, 8)}`}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-7 w-[160px] text-[11px] font-medium text-foreground bg-background border-border/40 rounded-full hover:bg-muted/50 transition-colors focus:ring-1 focus:ring-primary">
+                    <SelectValue placeholder="Select Camera" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background/95 backdrop-blur-xl border-border/50">
+                    {cameras.filter(cam => cam.deviceId).map((cam) => (
+                      <SelectItem key={cam.deviceId} value={cam.deviceId} className="text-xs focus:bg-primary/20">
+                        {cam.label || `Camera ${cam.deviceId.slice(0, 8)}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>
