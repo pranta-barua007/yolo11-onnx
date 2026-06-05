@@ -69,13 +69,51 @@ function revokeActiveBlobUrl() {
   }
 }
 
-ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
-  const msg = e.data;
+const queue: WorkerInMessage[] = [];
+let processing = false;
 
+ctx.onmessage = (e: MessageEvent<WorkerInMessage>) => {
+  const msg = e.data;
+  if (msg.type === "load-model") {
+    queue.length = 0; // Cancel all pending loads/inferences
+  }
+  queue.push(msg);
+  processQueue();
+};
+
+async function processQueue() {
+  if (processing) return;
+  processing = true;
+
+  while (queue.length > 0) {
+    const msg = queue.shift();
+    if (msg) {
+      try {
+        await handleMessage(msg);
+      } catch (err) {
+        console.error("[Worker] Error processing message in queue:", err);
+      }
+    }
+  }
+
+  processing = false;
+}
+
+async function handleMessage(msg: WorkerInMessage) {
   switch (msg.type) {
     // ── Load or switch model (with caching) ──
     case "load-model": {
       const key = `${msg.device}|${msg.modelPath}`;
+      
+      const postStatus = (status: string, extra = {}) => {
+        ctx.postMessage({
+          type: "model-status",
+          status,
+          modelPath: msg.modelPath,
+          device: msg.device,
+          ...extra
+        });
+      };
 
       if (msg.forceReload) {
         // Clear cache and release session entirely before proceeding
@@ -88,11 +126,7 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
         }
       } else if (session && sessionKey === key) {
         // Reuse if same model and not a forced reload
-        ctx.postMessage({
-          type: "model-status",
-          status: "Model loaded",
-          warmUpTime: "0",
-        });
+        postStatus("Model loaded", { warmUpTime: "0" });
         return;
       }
 
@@ -112,9 +146,9 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
         let modelBuffer = await getModelFromCache(msg.modelPath);
 
         if (modelBuffer) {
-          ctx.postMessage({ type: "model-status", status: "Loading from cache..." });
+          postStatus("Loading from cache...");
         } else {
-          ctx.postMessage({ type: "model-status", status: "Downloading model..." });
+          postStatus("Downloading model... ");
           const response = await fetch(msg.modelPath);
           if (!response.ok) throw new Error(`Failed to fetch model: ${response.status}`);
           modelBuffer = await response.arrayBuffer();
@@ -123,7 +157,7 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
         }
 
         // ── Create session via blob URL (preserves ONNX RT's optimized URL path) ──
-        ctx.postMessage({ type: "model-status", status: "Initializing model..." });
+        postStatus("Initializing model...");
         const blob = new Blob([modelBuffer], { type: "application/octet-stream" });
         const blobUrl = URL.createObjectURL(blob);
         activeBlobUrl = blobUrl;
@@ -196,28 +230,15 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
         const warmUpTime = (performance.now() - start).toFixed(2);
         sessionKey = key;
 
-        ctx.postMessage({
-          type: "model-status",
-          status: "Model loaded",
-          warmUpTime,
-        });
+        postStatus("Model loaded", { warmUpTime });
       } catch (error: unknown) {
         const errMsg = error instanceof Error ? error.message : "Unknown error";
         console.error("[Worker] Error loading model:", error);
 
-        // If WebGPU failed, tell main thread to fallback
         if (msg.device === "webgpu") {
-          ctx.postMessage({
-            type: "model-status",
-            status: "webgpu-failed",
-            error: errMsg,
-          });
+          postStatus("webgpu-failed", { error: errMsg });
         } else {
-          ctx.postMessage({
-            type: "model-status",
-            status: "Model loading failed",
-            error: errMsg,
-          });
+          postStatus("Model loading failed", { error: errMsg });
         }
       }
       break;
@@ -226,7 +247,6 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
     // ── Invalidate cached model ──
     case "invalidate-cache": {
       await deleteModelFromCache(msg.modelPath);
-      // Also release session so next load-model re-downloads
       if (session) {
         try { await session.release(); } catch { /* ignore */ }
         session = null;
@@ -259,7 +279,6 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
           inputName
         );
 
-        // Transfer the mask pixel buffer and original pixels for zero-copy
         const transfer: Transferable[] = [];
         if (result.maskPixels) {
           transfer.push(result.maskPixels.buffer);
@@ -275,7 +294,7 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
             inferenceTime: result.inferenceTime,
             maskPixels: result.maskPixels,
             maskWidth: result.maskWidth,
-            maskHeight: result.maskHeight,
+            maskHeight: msg.type === "run-inference" ? result.maskHeight : 0, // safe check
             originalBuffer: result.originalBuffer,
           },
           transfer
@@ -299,4 +318,4 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
       break;
     }
   }
-};
+}
