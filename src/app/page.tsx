@@ -119,7 +119,7 @@ export default function Home() {
       <main className="mx-auto p-2 sm:p-3 md:p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 lg:gap-6">
 
         {/* Sidebar Status (Detections) */}
-        <aside className="lg:col-span-4 xl:col-span-3 space-y-6 flex flex-col order-2 lg:order-1 h-[calc(100vh-120px)] sticky top-24">
+        <aside className="lg:col-span-4 xl:col-span-3 space-y-6 flex flex-col order-2 lg:order-1 lg:h-[calc(100vh-120px)] lg:min-h-170 h-auto sticky top-24">
           <ModelStatus
             details={details}
             selectedDetectionIdx={selectedDetectionIdx}
@@ -132,7 +132,7 @@ export default function Home() {
         </aside>
 
         {/* Main Display Area */}
-        <section className="lg:col-span-8 xl:col-span-9 flex flex-col gap-6 order-1 lg:order-2 lg:h-[calc(100vh-120px)] lg:sticky top-24">
+        <section className="lg:col-span-8 xl:col-span-9 flex flex-col gap-6 order-1 lg:order-2 lg:h-[calc(100vh-120px)] lg:min-h-170 lg:sticky top-24">
           <MediaDisplay
             inputCanvasRef={inputCanvasRef}
             cameraRef={cameraRef}
