@@ -82,6 +82,9 @@ export function useImageProcessing() {
   // ── Camera animation frame ID for cleanup ──
   const cameraRafRef = useRef<number | null>(null);
 
+  // ── Active camera processing loop cleanup function ──
+  const cameraCleanupRef = useRef<(() => void) | null>(null);
+
   // ── Reusable pixel buffer for GC reduction ──
   // Pre-allocated buffer dimensions — reset when canvas size changes.
   const pixelBufferRef = useRef<{ buffer: ArrayBuffer; width: number; height: number } | null>(null);
@@ -197,11 +200,23 @@ export function useImageProcessing() {
   ) => {
     if (!cameraRef.current || !inputCanvasRef.current || !overlayRef.current) return;
 
+    // Clean up any existing loop/listeners first
+    if (cameraCleanupRef.current) {
+      cameraCleanupRef.current();
+    }
+
     const inputCtx = inputCanvasRef.current.getContext("2d", { willReadFrequently: true });
     if (!inputCtx) return;
 
-    const videoW = cameraRef.current.videoWidth;
-    const videoH = cameraRef.current.videoHeight;
+    let videoW = cameraRef.current.videoWidth;
+    let videoH = cameraRef.current.videoHeight;
+    
+    // Fallback if not loaded yet
+    if (videoW === 0 || videoH === 0) {
+      videoW = 640;
+      videoH = 480;
+    }
+
     inputCtx.canvas.width = videoW;
     inputCtx.canvas.height = videoH;
     overlayRef.current.width = videoW;
@@ -226,8 +241,10 @@ export function useImageProcessing() {
       }
 
       // Recycle the array buffer for the next frame
-      if (msg.originalBuffer) {
-        pixelBufferRef.current = { buffer: msg.originalBuffer as ArrayBuffer, width: videoW, height: videoH };
+      if (msg.originalBuffer && cameraRef.current) {
+        const currentW = cameraRef.current.videoWidth || videoW;
+        const currentH = cameraRef.current.videoHeight || videoH;
+        pixelBufferRef.current = { buffer: msg.originalBuffer as ArrayBuffer, width: currentW, height: currentH };
       }
 
       drawWorkerResults(msg, overlayRef, maskSnapshotRef, setDetails, setInferenceTime, config.classes);
@@ -243,20 +260,36 @@ export function useImageProcessing() {
         return;
       }
 
+      // Check if camera stream resolution changed (e.g. orientation swap)
+      const currentW = cameraRef.current.videoWidth;
+      const currentH = cameraRef.current.videoHeight;
+
+      if (currentW > 0 && currentH > 0 && (currentW !== inputCtx.canvas.width || currentH !== inputCtx.canvas.height)) {
+        console.log(`[processCamera] Video dimensions changed: ${inputCtx.canvas.width}x${inputCtx.canvas.height} -> ${currentW}x${currentH}`);
+        inputCtx.canvas.width = currentW;
+        inputCtx.canvas.height = currentH;
+        if (overlayRef.current) {
+          overlayRef.current.width = currentW;
+          overlayRef.current.height = currentH;
+        }
+        pixelBufferRef.current = null;
+      }
+
+      const activeW = inputCtx.canvas.width;
+      const activeH = inputCtx.canvas.height;
+
       // Draw video frame to input canvas (~0.5ms)
-      inputCtx.drawImage(cameraRef.current, 0, 0, videoW, videoH);
+      inputCtx.drawImage(cameraRef.current, 0, 0, activeW, activeH);
 
       // Only send to worker if it's NOT busy (back-pressure)
       if (!workerBusyRef.current && workerReadyRef.current) {
         workerBusyRef.current = true;
 
         // Get pixel data from canvas
-        const imageData = inputCtx.getImageData(0, 0, videoW, videoH);
+        const imageData = inputCtx.getImageData(0, 0, activeW, activeH);
 
         // Copy into reusable buffer to reduce GC pressure.
-        // The original imageData.data gets GC'd but the heavy pixel
-        // allocation is amortized via the reusable buffer.
-        const reusablePixels = getPixelBuffer(videoW, videoH);
+        const reusablePixels = getPixelBuffer(activeW, activeH);
         reusablePixels.set(imageData.data);
 
         // Send copy to worker — transfer the reusable buffer
@@ -264,21 +297,29 @@ export function useImageProcessing() {
           {
             type: "run-inference",
             pixels: reusablePixels,
-            srcWidth: videoW,
-            srcHeight: videoH,
-            overlayWidth: videoW,
-            overlayHeight: videoH,
+            srcWidth: activeW,
+            srcHeight: activeH,
+            overlayWidth: activeW,
+            overlayHeight: activeH,
             config,
           },
           [reusablePixels.buffer]
         );
-
-        // Buffer was successfully transferred and will be returned by the worker
-        // so we DO NOT null it out here. We wait for the worker to bounce it back.
       }
 
       cameraRafRef.current = requestAnimationFrame(processFrame);
     };
+
+    // Store cleanup function in ref
+    const cleanup = () => {
+      if (cameraRafRef.current !== null) {
+        cancelAnimationFrame(cameraRafRef.current);
+        cameraRafRef.current = null;
+      }
+      worker.removeEventListener("message", handleWorkerMessage);
+      workerBusyRef.current = false;
+    };
+    cameraCleanupRef.current = cleanup;
 
     processFrame();
   };
@@ -287,11 +328,10 @@ export function useImageProcessing() {
    * Stop the camera processing loop.
    */
   const stopCameraProcessing = useCallback(() => {
-    if (cameraRafRef.current !== null) {
-      cancelAnimationFrame(cameraRafRef.current);
-      cameraRafRef.current = null;
+    if (cameraCleanupRef.current) {
+      cameraCleanupRef.current();
+      cameraCleanupRef.current = null;
     }
-    workerBusyRef.current = false;
   }, []);
 
   /**

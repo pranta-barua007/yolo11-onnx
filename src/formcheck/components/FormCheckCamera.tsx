@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { Exercise } from "../types";
 import { useYoloModel } from "../../hooks/useYoloModel";
 import { useCamera } from "../../hooks/useCamera";
@@ -77,10 +77,36 @@ export default function FormCheckCamera({
   } = useExerciseTracker(exercise, details, isTracking);
 
   // Start camera processing when camera loads
-  const handleCameraLoad = () => {
+  const handleCameraLoad = useCallback(() => {
     fpsReset();
     processCamera(config, workerRef, workerReadyRef, fpsTick);
-  };
+  }, [fpsReset, processCamera, config, workerRef, workerReadyRef, fpsTick]);
+
+  const isFirstRender = useRef(true);
+
+  // Restart camera detection and ensure video plays when toggling fullscreen
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    if (cameraStream) {
+      const timer = setTimeout(() => {
+        if (cameraRef.current) {
+          cameraRef.current.play()
+            .then(() => {
+              handleCameraLoad();
+            })
+            .catch(err => {
+              console.error("[FormCheckCamera] Error playing video on fullscreen toggle:", err);
+              handleCameraLoad();
+            });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isFullscreen, cameraStream, handleCameraLoad, cameraRef]);
 
   const handleCameraToggle = () => {
     if (cameraStream) {
@@ -248,15 +274,17 @@ export default function FormCheckCamera({
 
           {/* Active camera feed — same inline-block pattern as home page */}
           {cameraStream && (
-            <div className="absolute inset-1 sm:inset-3 md:inset-4 flex justify-center items-center pointer-events-none">
+            <div 
+              ref={containerRef}
+              className="absolute inset-1 sm:inset-3 md:inset-4 flex justify-center items-center pointer-events-none fullscreen:bg-black fullscreen:inset-0 fullscreen:w-screen fullscreen:h-screen fullscreen:pointer-events-auto fullscreen:z-50"
+            >
               <div 
-                ref={containerRef}
-                className="relative inline-block pointer-events-auto leading-none fullscreen:flex fullscreen:items-center fullscreen:justify-center fullscreen:bg-black fullscreen:w-screen fullscreen:h-screen"
+                className="relative inline-block pointer-events-auto leading-none"
               >
                 <video
                   ref={cameraRef}
-                  className="rounded-lg shadow-sm block fullscreen:max-h-screen fullscreen:max-w-full"
-                  style={isFullscreen ? { maxHeight: '100vh', maxWidth: '100%' } : { maxHeight: 'calc(100vh - 8rem)', maxWidth: '100%' }}
+                  className="rounded-lg shadow-sm block"
+                  style={isFullscreen ? { maxHeight: '100vh', maxWidth: '100vw' } : { maxHeight: 'calc(100vh - 8rem)', maxWidth: '100%' }}
                   onLoadedData={handleCameraLoad}
                   autoPlay
                   playsInline
