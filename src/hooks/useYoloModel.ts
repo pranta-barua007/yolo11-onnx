@@ -69,6 +69,7 @@ export function useYoloModel(initialModelName: string = "yolo11n-seg") {
   });
 
   const [isModelLoaded, setIsModelLoaded] = useState<boolean>(false);
+  const [loadedModelKey, setLoadedModelKey] = useState<string>("");
   const [warmUpTime, setWarmUpTime] = useState<string>("0");
   const [device, setDevice] = useState<string>(isWebGPUSupported() ? "webgpu" : "wasm");
   const [modelName, setModelName] = useState<string>(initialModelName);
@@ -98,8 +99,8 @@ export function useYoloModel(initialModelName: string = "yolo11n-seg") {
 
   const config: Config = { input_shape: DEFAULT_INPUT_SHAPE, iou_threshold: DEFAULT_IOU_THRESHOLD, score_threshold: scoreThreshold, classes: activeClasses, capabilities: activeCapabilities };
 
-  // Track whether a load is already in-flight
-  const loadingRef = useRef<boolean>(false);
+  // Track the currently in-flight load request (device|modelPath)
+  const loadingKeyRef = useRef<string | null>(null);
 
 
   /** Resolve model path — built-in uses /models/ URL, custom uses cache key directly. */
@@ -110,17 +111,25 @@ export function useYoloModel(initialModelName: string = "yolo11n-seg") {
 
   /** Load model in worker only */
   const loadModel = useCallback(async () => {
-    if (loadingRef.current) {
-      console.log("[useYoloModel] Load already in progress, skipping.");
+    const model_path = resolveModelPath(modelName);
+    const key = `${device}|${model_path}`;
+
+    if (loadedModelKey === key) {
+      setIsModelLoaded(true);
+      setModelStatus("Model loaded");
+      workerReadyRef.current = true;
       return;
     }
-    loadingRef.current = true;
 
+    if (loadingKeyRef.current === key) {
+      console.log(`[useYoloModel] Already loading ${key}, skipping.`);
+      return;
+    }
+
+    loadingKeyRef.current = key;
     setModelStatus("Loading model...");
     setIsModelLoaded(false);
     workerReadyRef.current = false;
-
-    const model_path = resolveModelPath(modelName);
 
     if (workerRef.current) {
       workerRef.current.postMessage({
@@ -131,10 +140,10 @@ export function useYoloModel(initialModelName: string = "yolo11n-seg") {
       });
     } else {
       console.error("[useYoloModel] Worker not initialized");
-      loadingRef.current = false;
+      loadingKeyRef.current = null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [device, modelName, customModels, resolveModelPath]);
+  }, [device, modelName, loadedModelKey, customModels, resolveModelPath]);
 
   /**
    * Invalidate cached model and re-download.
@@ -142,9 +151,9 @@ export function useYoloModel(initialModelName: string = "yolo11n-seg") {
    */
   const reloadModel = useCallback(() => {
     const model_path = resolveModelPath(modelName);
+    const key = `${device}|${model_path}`;
 
-    // Reset UI state
-    loadingRef.current = true;
+    loadingKeyRef.current = key;
     setIsModelLoaded(false);
     setModelStatus("Loading model...");
     workerReadyRef.current = false;
@@ -214,20 +223,28 @@ export function useYoloModel(initialModelName: string = "yolo11n-seg") {
     const handleMessage = (e: MessageEvent) => {
       const msg = e.data;
       if (msg.type === "model-status") {
+        // Ignore status updates for stale configs (e.g. from previous navigations or switches)
+        const expectedModelPath = resolveModelPath(modelName);
+        if (msg.modelPath !== expectedModelPath || msg.device !== device) {
+          console.log(`[useYoloModel] Ignoring status "${msg.status}" for stale config: ${msg.device}|${msg.modelPath}`);
+          return;
+        }
+
         if (msg.status === "Model loaded") {
           workerReadyRef.current = true;
           setWarmUpTime(msg.warmUpTime);
           setModelStatus("Model loaded");
           setIsModelLoaded(true);
-          loadingRef.current = false;
+          setLoadedModelKey(`${msg.device}|${msg.modelPath}`);
+          loadingKeyRef.current = null;
         } else if (msg.status === "webgpu-failed") {
           console.warn("[useYoloModel] WebGPU failed in worker, falling back to WASM...");
-          loadingRef.current = false;
+          loadingKeyRef.current = null;
           setDevice("wasm"); // triggers re-load via effect
         } else if (msg.status === "Model loading failed") {
           console.error("[useYoloModel] Worker model loading failed:", msg.error);
           setModelStatus("Model loading failed");
-          loadingRef.current = false;
+          loadingKeyRef.current = null;
         } else {
           setModelStatus(msg.status);
         }
@@ -236,7 +253,7 @@ export function useYoloModel(initialModelName: string = "yolo11n-seg") {
 
     const handleError = (error: ErrorEvent) => {
       console.error("[useYoloModel] Worker error:", error);
-      loadingRef.current = false;
+      loadingKeyRef.current = null;
     };
 
     activeListeners.add(handleMessage);
@@ -246,7 +263,7 @@ export function useYoloModel(initialModelName: string = "yolo11n-seg") {
       activeListeners.delete(handleMessage);
       activeErrorListeners.delete(handleError);
     };
-  }, [device, modelName]);
+  }, [device, modelName, resolveModelPath]);
 
   // Load model when device/modelName/customModels change
   useEffect(() => {
