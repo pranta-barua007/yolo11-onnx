@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import { useMediaDisplay } from "./MediaDisplayContext";
 import Placeholder from "./Placeholder";
@@ -19,6 +19,33 @@ export default function MediaArea() {
 
   const showPlaceholder = !imgSrc && !cameraStream;
   const hasMedia = !!(cameraStream || imgSrc);
+
+  const isFirstRender = useRef(true);
+
+  // Restart camera detection and ensure video plays when toggling fullscreen
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    if (cameraStream) {
+      const timer = setTimeout(() => {
+        if (cameraRef.current) {
+          cameraRef.current.play()
+            .then(() => {
+              onCameraLoad();
+            })
+            .catch(err => {
+              console.error("[MediaArea] Error playing video on fullscreen toggle:", err);
+              // Still trigger load/processing in case it's just a browser restriction
+              onCameraLoad();
+            });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isFullscreen, cameraStream, onCameraLoad, cameraRef]);
 
   return (
     <div
@@ -41,16 +68,18 @@ export default function MediaArea() {
 
       {/* Media Wrapper for correct overlay alignment */}
       {hasMedia && (
-        <div className="absolute inset-1 sm:inset-3 md:inset-4 flex justify-center items-center pointer-events-none">
+        <div 
+          ref={containerRef}
+          className="absolute inset-1 sm:inset-3 md:inset-4 flex justify-center items-center pointer-events-none fullscreen:bg-black fullscreen:inset-0 fullscreen:w-screen fullscreen:h-screen fullscreen:pointer-events-auto fullscreen:z-50"
+        >
           <div 
-            ref={containerRef}
-            className="relative inline-block pointer-events-auto leading-none fullscreen:flex fullscreen:items-center fullscreen:justify-center fullscreen:bg-black fullscreen:w-screen fullscreen:h-screen"
+            className="relative inline-block pointer-events-auto leading-none"
           >
             {/* Video for camera feed */}
             <video
               ref={cameraRef}
-              className={`rounded-lg shadow-sm ${!cameraStream ? 'hidden' : 'block'} fullscreen:max-h-screen fullscreen:max-w-full`}
-              style={isFullscreen ? { maxHeight: '100vh', maxWidth: '100%' } : { maxHeight: 'calc(100vh - 13rem)', maxWidth: '100%' }}
+              className={`rounded-lg shadow-sm ${!cameraStream ? 'hidden' : 'block'}`}
+              style={isFullscreen ? { maxHeight: '100vh', maxWidth: '100vw' } : { maxHeight: 'calc(100vh - 13rem)', maxWidth: '100%' }}
               onLoadedData={onCameraLoad}
               autoPlay
               playsInline
@@ -65,9 +94,9 @@ export default function MediaArea() {
                 ref={imgRef}
                 src={imgSrc}
                 onLoad={onImageLoad}
-                className="rounded-lg shadow-sm fullscreen:max-h-screen fullscreen:max-w-full"
+                className="rounded-lg shadow-sm"
                 alt="Input"
-                style={isFullscreen ? { maxHeight: '100vh', maxWidth: '100%' } : { maxHeight: 'calc(100vh - 13rem)', maxWidth: '100%' }}
+                style={isFullscreen ? { maxHeight: '100vh', maxWidth: '100vw' } : { maxHeight: 'calc(100vh - 13rem)', maxWidth: '100%' }}
               />
             ) : null}
 
