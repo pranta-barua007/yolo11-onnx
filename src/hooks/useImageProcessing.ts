@@ -200,23 +200,17 @@ export function useImageProcessing() {
   ) => {
     if (!cameraRef.current || !inputCanvasRef.current || !overlayRef.current) return;
 
-    // Clean up any existing loop/listeners first
-    if (cameraCleanupRef.current) {
-      cameraCleanupRef.current();
-    }
-
     const inputCtx = inputCanvasRef.current.getContext("2d", { willReadFrequently: true });
     if (!inputCtx) return;
 
-    let videoW = cameraRef.current.videoWidth;
-    let videoH = cameraRef.current.videoHeight;
-    
-    // Fallback if not loaded yet
-    if (videoW === 0 || videoH === 0) {
-      videoW = 640;
-      videoH = 480;
+    // Clean up any existing camera loop before starting a new one
+    if (cameraCleanupRef.current) {
+      cameraCleanupRef.current();
+      cameraCleanupRef.current = null;
     }
 
+    const videoW = cameraRef.current.videoWidth;
+    const videoH = cameraRef.current.videoHeight;
     inputCtx.canvas.width = videoW;
     inputCtx.canvas.height = videoH;
     overlayRef.current.width = videoW;
@@ -241,10 +235,8 @@ export function useImageProcessing() {
       }
 
       // Recycle the array buffer for the next frame
-      if (msg.originalBuffer && cameraRef.current) {
-        const currentW = cameraRef.current.videoWidth || videoW;
-        const currentH = cameraRef.current.videoHeight || videoH;
-        pixelBufferRef.current = { buffer: msg.originalBuffer as ArrayBuffer, width: currentW, height: currentH };
+      if (msg.originalBuffer) {
+        pixelBufferRef.current = { buffer: msg.originalBuffer as ArrayBuffer, width: videoW, height: videoH };
       }
 
       drawWorkerResults(msg, overlayRef, maskSnapshotRef, setDetails, setInferenceTime, config.classes);
@@ -256,7 +248,10 @@ export function useImageProcessing() {
     // ── requestAnimationFrame loop ──
     const processFrame = () => {
       if (!cameraRef.current || !cameraRef.current.srcObject) {
-        worker.removeEventListener("message", handleWorkerMessage);
+        if (cameraCleanupRef.current) {
+          cameraCleanupRef.current();
+          cameraCleanupRef.current = null;
+        }
         return;
       }
 

@@ -130,8 +130,28 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
 
         // Wrap session creation and warmup in a timeout to catch WebGPU shader compilation/driver hangs
         const initializeSession = async () => {
+          const ep = msg.device === "webgpu" ? {
+            name: "webgpu",
+            options: {
+              forceCpuNodeNames: [
+                "/model.11/Resize",
+                "/model.11/Resize_input_cast0",
+                "/model.11/Resize_input_cast_0",
+                "/model.11/Resize_output_0",
+                "/model.11/Resize_output_cast0",
+                "/model.11/Resize_output_cast_0",
+                "/model.14/Resize",
+                "/model.14/Resize_input_cast0",
+                "/model.14/Resize_input_cast_0",
+                "/model.14/Resize_output_0",
+                "/model.14/Resize_output_cast0",
+                "/model.14/Resize_output_cast_0"
+              ],
+            }
+          } : msg.device;
+
           const sess = await ort.InferenceSession.create(blobUrl, {
-            executionProviders: [msg.device],
+            executionProviders: [ep],
             graphOptimizationLevel: "all",
             logSeverityLevel: 3,
           });
@@ -169,8 +189,8 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
 
         session = await withTimeout(
           initializeSession(),
-          20000,
-          `Model initialization timed out after 20s on ${msg.device}`
+          30000,
+          `Model initialization timed out after 30s on ${msg.device}`
         );
 
         const warmUpTime = (performance.now() - start).toFixed(2);

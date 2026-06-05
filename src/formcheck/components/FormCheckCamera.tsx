@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { Exercise } from "../types";
 import { useYoloModel } from "../../hooks/useYoloModel";
 import { useCamera } from "../../hooks/useCamera";
@@ -14,6 +14,13 @@ import SessionSummary from "./SessionSummary";
 import ExercisePicker from "./ExercisePicker";
 import { useFullscreen } from "../../hooks/useFullscreen";
 import FullscreenButton from "../../components/ui/FullscreenButton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 
 interface FormCheckCameraProps {
   exercise: Exercise | null;
@@ -77,36 +84,10 @@ export default function FormCheckCamera({
   } = useExerciseTracker(exercise, details, isTracking);
 
   // Start camera processing when camera loads
-  const handleCameraLoad = useCallback(() => {
+  const handleCameraLoad = () => {
     fpsReset();
     processCamera(config, workerRef, workerReadyRef, fpsTick);
-  }, [fpsReset, processCamera, config, workerRef, workerReadyRef, fpsTick]);
-
-  const isFirstRender = useRef(true);
-
-  // Restart camera detection and ensure video plays when toggling fullscreen
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
-    if (cameraStream) {
-      const timer = setTimeout(() => {
-        if (cameraRef.current) {
-          cameraRef.current.play()
-            .then(() => {
-              handleCameraLoad();
-            })
-            .catch(err => {
-              console.error("[FormCheckCamera] Error playing video on fullscreen toggle:", err);
-              handleCameraLoad();
-            });
-        }
-      }, 150);
-      return () => clearTimeout(timer);
-    }
-  }, [isFullscreen, cameraStream, handleCameraLoad, cameraRef]);
+  };
 
   const handleCameraToggle = () => {
     if (cameraStream) {
@@ -216,17 +197,24 @@ export default function FormCheckCamera({
                   <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
                   <rect x="2" y="6" width="14" height="12" rx="2" />
                 </svg>
-                <select
+                <Select
                   value={selectedDeviceId}
-                  onChange={(e) => setSelectedDeviceId(e.target.value)}
-                  className="text-xs bg-transparent border-none text-muted-foreground cursor-pointer pr-4"
+                  onValueChange={setSelectedDeviceId}
+                  onOpenChange={(open) => {
+                    if (open) refreshCameras(true);
+                  }}
                 >
-                  {cameras.map((cam) => (
-                    <option key={cam.deviceId} value={cam.deviceId}>
-                      {cam.label || `Camera ${cam.deviceId.slice(0, 8)}`}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-7 w-[160px] text-[11px] font-medium text-foreground bg-background border-border/40 rounded-full hover:bg-muted/50 transition-colors focus:ring-1 focus:ring-primary">
+                    <SelectValue placeholder="Select Camera" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background/95 backdrop-blur-xl border-border/50">
+                    {cameras.filter(cam => cam.deviceId).map((cam) => (
+                      <SelectItem key={cam.deviceId} value={cam.deviceId} className="text-xs focus:bg-primary/20">
+                        {cam.label || `Camera ${cam.deviceId.slice(0, 8)}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>
@@ -279,12 +267,14 @@ export default function FormCheckCamera({
               className="absolute inset-1 sm:inset-3 md:inset-4 flex justify-center items-center pointer-events-none fullscreen:bg-black fullscreen:inset-0 fullscreen:w-screen fullscreen:h-screen fullscreen:pointer-events-auto fullscreen:z-50"
             >
               <div 
-                className="relative inline-block pointer-events-auto leading-none"
+                className={`relative pointer-events-auto leading-none ${
+                  isFullscreen ? "w-full h-full" : "inline-block"
+                }`}
               >
                 <video
                   ref={cameraRef}
                   className="rounded-lg shadow-sm block"
-                  style={isFullscreen ? { maxHeight: '100vh', maxWidth: '100vw' } : { maxHeight: 'calc(100vh - 8rem)', maxWidth: '100%' }}
+                  style={isFullscreen ? { height: '100%', width: '100%', objectFit: 'cover' } : { maxHeight: 'calc(100vh - 8rem)', maxWidth: '100%' }}
                   onLoadedData={handleCameraLoad}
                   autoPlay
                   playsInline
@@ -294,7 +284,8 @@ export default function FormCheckCamera({
                 {/* Overlay canvas — sized to match video exactly */}
                 <canvas
                   ref={overlayRef}
-                  className="absolute inset-0 w-full h-full pointer-events-none rounded-lg"
+                  className="absolute inset-0 pointer-events-none rounded-lg"
+                  style={isFullscreen ? { height: '100%', width: '100%', objectFit: 'cover' } : { width: '100%', height: '100%' }}
                 />
 
                 {/* Angle arcs drawn on top */}
@@ -303,29 +294,29 @@ export default function FormCheckCamera({
                   details={details}
                   exercise={exercise}
                 />
-
-                {/* Stop button — Inside fullscreen container */}
-                <button
-                  onClick={() => {
-                    if (isFullscreen) toggleFullscreen();
-                    handleCameraToggle();
-                  }}
-                  className="absolute top-2 right-2 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-destructive/25 border border-transparent hover:bg-destructive/20 hover:border-destructive/30 text-destructive/40 hover:text-destructive transition-all duration-300 pointer-events-auto backdrop-blur-sm"
-                  aria-label="Stop Camera"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-
-                {/* Fullscreen toggle button */}
-                <FullscreenButton
-                  isFullscreen={isFullscreen}
-                  onClick={toggleFullscreen}
-                  className="absolute top-2 right-12 z-10"
-                />
               </div>
+
+              {/* Stop button — anchored to parent container */}
+              <button
+                onClick={() => {
+                  if (isFullscreen) toggleFullscreen();
+                  handleCameraToggle();
+                }}
+                className="absolute top-0 right-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-destructive/25 border border-transparent hover:bg-destructive/20 hover:border-destructive/30 text-destructive/40 hover:text-destructive transition-all duration-300 pointer-events-auto backdrop-blur-sm md:top-2 md:right-2"
+                aria-label="Stop Camera"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+
+              {/* Fullscreen Toggle Button */}
+              <FullscreenButton
+                isFullscreen={isFullscreen}
+                onClick={toggleFullscreen}
+                className="absolute top-0 right-10 md:top-2 md:right-12 z-10"
+              />
             </div>
           )}
         </div>
