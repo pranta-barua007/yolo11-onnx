@@ -32,7 +32,8 @@ function drawWorkerResults(
   overlayRef: React.RefObject<HTMLCanvasElement | null>,
   maskSnapshotRef: React.MutableRefObject<ImageData | null>,
   setDetails: (boxes: Box[]) => void,
-  setInferenceTime: (time: string) => void
+  setInferenceTime: (time: string) => void,
+  classes?: string[]
 ) {
   // Draw masks on overlay canvas
   if (msg.maskPixels && overlayRef.current) {
@@ -60,7 +61,7 @@ function drawWorkerResults(
   setInferenceTime(msg.inferenceTime);
 
   if (overlayRef.current) {
-    draw_bounding_boxes(boxes, overlayRef.current);
+    draw_bounding_boxes(boxes, overlayRef.current, null, classes);
   }
 }
 
@@ -158,7 +159,7 @@ export function useImageProcessing() {
         return;
       }
 
-      drawWorkerResults(msg, overlayRef, maskSnapshotRef, setDetails, setInferenceTime);
+      drawWorkerResults(msg, overlayRef, maskSnapshotRef, setDetails, setInferenceTime, config.classes);
     };
 
     worker.addEventListener("message", handleResult);
@@ -229,7 +230,7 @@ export function useImageProcessing() {
         pixelBufferRef.current = { buffer: msg.originalBuffer as ArrayBuffer, width: videoW, height: videoH };
       }
 
-      drawWorkerResults(msg, overlayRef, maskSnapshotRef, setDetails, setInferenceTime);
+      drawWorkerResults(msg, overlayRef, maskSnapshotRef, setDetails, setInferenceTime, config.classes);
       onFrameTick?.();
     };
 
@@ -296,7 +297,12 @@ export function useImageProcessing() {
   /**
    * Re-draw overlay: restore mask snapshot then draw filtered boxes.
    */
-  const redrawOverlay = useCallback(async (boxes: Box[], filterIndex: number | null, selectedKeypointIdx: number | null = null) => {
+  const redrawOverlay = useCallback(async (
+    boxes: Box[],
+    filterIndex: number | null,
+    selectedKeypointIdx: number | null = null,
+    classes?: string[]
+  ) => {
     if (!overlayRef.current) return;
     const ctx = overlayRef.current.getContext("2d");
     if (!ctx) return;
@@ -307,7 +313,7 @@ export function useImageProcessing() {
       ctx.clearRect(0, 0, overlayRef.current.width, overlayRef.current.height);
     }
 
-    await draw_bounding_boxes(boxes, overlayRef.current, filterIndex, undefined, selectedKeypointIdx);
+    await draw_bounding_boxes(boxes, overlayRef.current, filterIndex, classes, selectedKeypointIdx);
   }, []);
 
   /** Composite source image + overlay canvas and download as PNG. */

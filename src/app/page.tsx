@@ -88,12 +88,12 @@ export default function Home() {
   const handleSelectDetection = (idx: number | null) => {
     setSelectedDetectionIdx(idx);
     setSelectedKeypointIdx(null); // Reset keypoint when changing detection
-    redrawOverlay(details, idx, null);
+    redrawOverlay(details, idx, null, activeClasses);
   };
 
   const handleSelectKeypoint = (kpIdx: number | null) => {
     setSelectedKeypointIdx(kpIdx);
-    redrawOverlay(details, selectedDetectionIdx, kpIdx);
+    redrawOverlay(details, selectedDetectionIdx, kpIdx, activeClasses);
   };
 
   // Cleanup camera stream and processing when component unmounts
