@@ -4,6 +4,21 @@ import { getModelFromCache, putModelInCache, deleteModelFromCache } from "../uti
 import { ensurePrecision } from "../utils/precision";
 import { Config } from "../utils/model_config";
 
+/**
+ * Wraps a promise in a timeout.
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMsg: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(errorMsg));
+    }, timeoutMs);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+}
+
 // ── Worker-global state ──
 let session: ort.InferenceSession | null = null;
 let sessionKey: string | null = null;
@@ -113,39 +128,50 @@ ctx.onmessage = async (e: MessageEvent<WorkerInMessage>) => {
         const blobUrl = URL.createObjectURL(blob);
         activeBlobUrl = blobUrl;
 
-        session = await ort.InferenceSession.create(blobUrl, {
-          executionProviders: [msg.device],
-          graphOptimizationLevel: "all",
-          logSeverityLevel: 3,
-        });
+        // Wrap session creation and warmup in a timeout to catch WebGPU shader compilation/driver hangs
+        const initializeSession = async () => {
+          const sess = await ort.InferenceSession.create(blobUrl, {
+            executionProviders: [msg.device],
+            graphOptimizationLevel: "all",
+            logSeverityLevel: 3,
+          });
 
-        // ── Session Diagnostics ──
-        const sessionWithMeta = session as unknown as { 
-          inputMetadata: Record<string, { type: string }>; 
-          outputMetadata: Record<string, unknown>;
+          // ── Session Diagnostics ──
+          const sessionWithMeta = sess as unknown as { 
+            inputMetadata: Record<string, { type: string }>; 
+            outputMetadata: Record<string, unknown>;
+          };
+          console.log(`[Worker] Session created on ${msg.device}`);
+          console.log("[Worker] Input Metadata:", sessionWithMeta.inputMetadata);
+          console.log("[Worker] Output Metadata:", sessionWithMeta.outputMetadata);
+
+          // ── Precision-Aware Warm-up ──
+          const inputName = sess.inputNames[0] || "images";
+          const inputMeta = sessionWithMeta.inputMetadata?.[inputName];
+          const inputType = inputMeta?.type || "float32";
+
+          const shape = msg.config.input_shape;
+          const dummySize = shape.reduce((a, b) => a * b, 1);
+          
+          // Use ensurePrecision to match model requirements
+          const dummyData = ensurePrecision(new Float32Array(dummySize), inputType);
+          const dummy = new ort.Tensor(inputType as "float32" | "float16", dummyData, shape);
+          
+          try {
+            const warmupOutput = await sess.run({ [inputName]: dummy });
+            Object.values(warmupOutput).forEach(t => t.dispose());
+          } finally {
+            dummy.dispose();
+          }
+
+          return sess;
         };
-        console.log(`[Worker] Session created on ${msg.device}`);
-        console.log("[Worker] Input Metadata:", sessionWithMeta.inputMetadata);
-        console.log("[Worker] Output Metadata:", sessionWithMeta.outputMetadata);
 
-        // ── Precision-Aware Warm-up ──
-        const inputName = session.inputNames[0] || "images";
-        const inputMeta = sessionWithMeta.inputMetadata?.[inputName];
-        const inputType = inputMeta?.type || "float32";
-
-        
-        const shape = msg.config.input_shape;
-        const dummySize = shape.reduce((a, b) => a * b, 1);
-        
-        // Use ensurePrecision to match model requirements
-        const dummyData = ensurePrecision(new Float32Array(dummySize), inputType);
-        const dummy = new ort.Tensor(inputType as "float32" | "float16", dummyData, shape);
-        
-        const warmupOutput = await session.run({ [inputName]: dummy });
-        
-        // Dispose warmup outputs
-        Object.values(warmupOutput).forEach(t => t.dispose());
-        dummy.dispose();
+        session = await withTimeout(
+          initializeSession(),
+          20000,
+          `Model initialization timed out after 20s on ${msg.device}`
+        );
 
         const warmUpTime = (performance.now() - start).toFixed(2);
         sessionKey = key;
