@@ -304,10 +304,10 @@ export default function StatusBar() {
   const [showSettings, setShowSettings] = useState(false);
 
   return (
-    <div className="flex-none bg-transparent border-b border-border/40 px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 min-h-[64px]">
+    <div className="flex-none bg-transparent border-b border-border/40 px-4 py-3 flex flex-col 2xl:flex-row items-stretch 2xl:items-center justify-between gap-4 min-h-[64px]">
       {mounted ? (
         <>
-          <div className={`flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-4 transition-all duration-300 ${!showSettings ? 'hidden md:flex' : 'flex'}`}>
+          <div className={`flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center gap-2 md:gap-4 transition-all duration-300 ${!showSettings ? 'hidden md:flex' : 'flex'}`}>
             <DeviceSelect />
             <ModelSelect />
             <CameraSelect />

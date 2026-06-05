@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Exercise } from "../types";
 import { useYoloModel } from "../../hooks/useYoloModel";
 import { useCamera } from "../../hooks/useCamera";
@@ -12,6 +12,8 @@ import RepCounter from "./RepCounter";
 import FormFeedback from "./FormFeedback";
 import SessionSummary from "./SessionSummary";
 import ExercisePicker from "./ExercisePicker";
+import { useFullscreen } from "../../hooks/useFullscreen";
+import FullscreenButton from "../../components/ui/FullscreenButton";
 
 interface FormCheckCameraProps {
   exercise: Exercise | null;
@@ -59,6 +61,9 @@ export default function FormCheckCamera({
     stopCameraProcessing,
     clearOverlay,
   } = useImageProcessing();
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
 
   const isTracking = !!cameraStream && isModelLoaded;
 
@@ -110,7 +115,7 @@ export default function FormCheckCamera({
       <aside className="lg:col-span-2 space-y-3 order-2 lg:order-1 overflow-y-auto scrollbar-none">
         {/* Branding */}
         <div className="flex items-center gap-2.5 pb-2 border-b border-border/30">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-linear-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0">
             <span className="text-base" aria-hidden="true">🏋️</span>
           </div>
           <div className="min-w-0">
@@ -181,7 +186,7 @@ export default function FormCheckCamera({
             {/* Camera selector with video icon */}
             {cameras.length > 1 && (
               <div className="flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-3.5 h-3.5 text-muted-foreground shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
                   <rect x="2" y="6" width="14" height="12" rx="2" />
                 </svg>
@@ -202,7 +207,7 @@ export default function FormCheckCamera({
         </div>
 
         {/* Camera viewport — uses same pattern as home page MediaArea */}
-        <div className="relative flex-1 min-h-[540px] min-h-0 overflow-hidden bg-transparent flex items-center justify-center">
+        <div className="relative flex-1 min-h-135 overflow-hidden bg-transparent flex items-center justify-center">
           {/* Hidden inference canvas */}
           <canvas ref={inputCanvasRef} className="hidden" />
 
@@ -244,11 +249,14 @@ export default function FormCheckCamera({
           {/* Active camera feed — same inline-block pattern as home page */}
           {cameraStream && (
             <div className="absolute inset-1 sm:inset-3 md:inset-4 flex justify-center items-center pointer-events-none">
-              <div className="relative inline-block pointer-events-auto leading-none">
+              <div 
+                ref={containerRef}
+                className="relative inline-block pointer-events-auto leading-none fullscreen:flex fullscreen:items-center fullscreen:justify-center fullscreen:bg-black fullscreen:w-screen fullscreen:h-screen"
+              >
                 <video
                   ref={cameraRef}
-                  className="rounded-lg shadow-sm block"
-                  style={{ maxHeight: 'calc(100vh - 8rem)', maxWidth: '100%' }}
+                  className="rounded-lg shadow-sm block fullscreen:max-h-screen fullscreen:max-w-full"
+                  style={isFullscreen ? { maxHeight: '100vh', maxWidth: '100%' } : { maxHeight: 'calc(100vh - 8rem)', maxWidth: '100%' }}
                   onLoadedData={handleCameraLoad}
                   autoPlay
                   playsInline
@@ -267,19 +275,29 @@ export default function FormCheckCamera({
                   details={details}
                   exercise={exercise}
                 />
-              </div>
 
-              {/* Stop button — anchored to parent container */}
-              <button
-                onClick={handleCameraToggle}
-                className="absolute top-0 right-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-destructive/25 border border-transparent hover:bg-destructive/20 hover:border-destructive/30 text-destructive/40 hover:text-destructive transition-all duration-300 pointer-events-auto backdrop-blur-sm md:top-2 md:right-2"
-                aria-label="Stop Camera"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
+                {/* Stop button — Inside fullscreen container */}
+                <button
+                  onClick={() => {
+                    if (isFullscreen) toggleFullscreen();
+                    handleCameraToggle();
+                  }}
+                  className="absolute top-2 right-2 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-destructive/25 border border-transparent hover:bg-destructive/20 hover:border-destructive/30 text-destructive/40 hover:text-destructive transition-all duration-300 pointer-events-auto backdrop-blur-sm"
+                  aria-label="Stop Camera"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+
+                {/* Fullscreen toggle button */}
+                <FullscreenButton
+                  isFullscreen={isFullscreen}
+                  onClick={toggleFullscreen}
+                  className="absolute top-2 right-12 z-10"
+                />
+              </div>
             </div>
           )}
         </div>
