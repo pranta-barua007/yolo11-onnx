@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef } from "react";
 import { X } from "lucide-react";
 import { useMediaDisplay } from "./MediaDisplayContext";
 import Placeholder from "./Placeholder";
@@ -20,32 +20,7 @@ export default function MediaArea() {
   const showPlaceholder = !imgSrc && !cameraStream;
   const hasMedia = !!(cameraStream || imgSrc);
 
-  const isFirstRender = useRef(true);
 
-  // Restart camera detection and ensure video plays when toggling fullscreen
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
-    if (cameraStream) {
-      const timer = setTimeout(() => {
-        if (cameraRef.current) {
-          cameraRef.current.play()
-            .then(() => {
-              onCameraLoad();
-            })
-            .catch(err => {
-              console.error("[MediaArea] Error playing video on fullscreen toggle:", err);
-              // Still trigger load/processing in case it's just a browser restriction
-              onCameraLoad();
-            });
-        }
-      }, 150);
-      return () => clearTimeout(timer);
-    }
-  }, [isFullscreen, cameraStream, onCameraLoad, cameraRef]);
 
   return (
     <div
