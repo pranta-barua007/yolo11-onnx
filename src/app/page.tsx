@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import MediaDisplay from "../components/MediaDisplay";
 import ModelStatus from "../components/ModelStatus";
 import { useYoloModel } from "../hooks/useYoloModel";
@@ -8,7 +8,6 @@ import { useCamera } from "../hooks/useCamera";
 import { useImageProcessing } from "../hooks/useImageProcessing";
 import { useFps } from "../hooks/useFps";
 import "../styles/styles.css";
-import { useEffect } from "react";
 
 export default function Home() {
   const {
@@ -65,25 +64,25 @@ export default function Home() {
   const [selectedDetectionIdx, setSelectedDetectionIdx] = useState<number | null>(null);
   const [selectedKeypointIdx, setSelectedKeypointIdx] = useState<number | null>(null);
 
-  const handleImageLoad = () => {
+  const handleImageLoad = useCallback(() => {
     fpsReset();
     setSelectedDetectionIdx(null);
     processImage(config, workerRef, workerReadyRef);
-  };
+  }, [fpsReset, processImage, config, workerRef, workerReadyRef]);
 
-  const handleCameraLoad = () => {
+  const handleCameraLoad = useCallback(() => {
     fpsReset();
     setSelectedDetectionIdx(null);
     processCamera(config, workerRef, workerReadyRef, fpsTick);
-  };
+  }, [fpsReset, processCamera, config, workerRef, workerReadyRef, fpsTick]);
 
-  const handleCameraToggle = () => {
+  const handleCameraToggle = useCallback(() => {
     if (cameraStream) {
       clearOverlay();
       fpsReset();
     }
     toggleCamera();
-  };
+  }, [cameraStream, clearOverlay, fpsReset, toggleCamera]);
 
   const handleSelectDetection = (idx: number | null) => {
     setSelectedDetectionIdx(idx);
