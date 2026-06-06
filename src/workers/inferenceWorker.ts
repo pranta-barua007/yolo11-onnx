@@ -42,6 +42,7 @@ export interface RunInferenceMessage {
   overlayWidth: number;
   overlayHeight: number;
   config: Config;
+  instanceId?: string;
 }
 
 export interface ReleaseMessage {
@@ -262,6 +263,7 @@ async function handleMessage(msg: WorkerInMessage) {
         ctx.postMessage({
           type: "inference-result",
           error: "No model loaded",
+          instanceId: msg.instanceId,
         });
         return;
       }
@@ -290,6 +292,7 @@ async function handleMessage(msg: WorkerInMessage) {
         ctx.postMessage(
           {
             type: "inference-result",
+            instanceId: msg.instanceId,
             boxes: result.boxes,
             inferenceTime: result.inferenceTime,
             maskPixels: result.maskPixels,
@@ -302,7 +305,11 @@ async function handleMessage(msg: WorkerInMessage) {
       } catch (error: unknown) {
         const errMsg = error instanceof Error ? error.message : "Unknown error";
         console.error("[Worker] Inference error:", error);
-        ctx.postMessage({ type: "inference-result", error: errMsg });
+        ctx.postMessage({
+          type: "inference-result",
+          error: errMsg,
+          instanceId: msg.instanceId,
+        });
       }
       break;
     }
