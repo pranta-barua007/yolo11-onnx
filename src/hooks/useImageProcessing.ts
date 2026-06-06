@@ -151,10 +151,13 @@ export function useImageProcessing() {
     // Get pixel data and send to worker
     const imageData = inputCtx.getImageData(0, 0, naturalW, naturalH);
 
+    const instanceId = Math.random().toString(36).slice(2) + Date.now();
+
     // One-shot listener for image result
     const handleResult = (e: MessageEvent) => {
       const msg = e.data;
       if (msg.type !== "inference-result") return;
+      if (msg.instanceId && msg.instanceId !== instanceId) return;
       worker.removeEventListener("message", handleResult);
 
       if (msg.error) {
@@ -176,6 +179,7 @@ export function useImageProcessing() {
         overlayWidth: naturalW,
         overlayHeight: naturalH,
         config,
+        instanceId,
       },
       [imageData.data.buffer]
     );
@@ -222,10 +226,15 @@ export function useImageProcessing() {
       return;
     }
 
+    const instanceId = Math.random().toString(36).slice(2) + Date.now();
+
     // ── Worker message handler for inference results ──
     const handleWorkerMessage = (e: MessageEvent) => {
       const msg = e.data;
       if (msg.type !== "inference-result") return;
+      if (msg.instanceId && msg.instanceId !== instanceId) {
+        return; // Ignore stale result
+      }
 
       workerBusyRef.current = false;
 
@@ -297,6 +306,7 @@ export function useImageProcessing() {
             overlayWidth: activeW,
             overlayHeight: activeH,
             config,
+            instanceId,
           },
           [reusablePixels.buffer]
         );
