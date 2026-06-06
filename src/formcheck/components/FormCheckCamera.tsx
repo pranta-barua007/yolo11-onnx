@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { Exercise } from "../types";
 import { useYoloModel } from "../../hooks/useYoloModel";
 import { useCamera } from "../../hooks/useCamera";
@@ -84,18 +84,18 @@ export default function FormCheckCamera({
   } = useExerciseTracker(exercise, details, isTracking);
 
   // Start camera processing when camera loads
-  const handleCameraLoad = () => {
+  const handleCameraLoad = useCallback(() => {
     fpsReset();
     processCamera(config, workerRef, workerReadyRef, fpsTick);
-  };
+  }, [fpsReset, processCamera, config, workerRef, workerReadyRef, fpsTick]);
 
-  const handleCameraToggle = () => {
+  const handleCameraToggle = useCallback(() => {
     if (cameraStream) {
       clearOverlay();
       fpsReset();
     }
     toggleCamera();
-  };
+  }, [cameraStream, clearOverlay, fpsReset, toggleCamera]);
 
   // Cleanup on unmount
   useEffect(() => {

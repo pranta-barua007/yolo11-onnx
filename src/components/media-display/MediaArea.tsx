@@ -1,11 +1,25 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect, useCallback, useInsertionEffect } from "react";
 import { X } from "lucide-react";
 import { useMediaDisplay } from "./MediaDisplayContext";
 import Placeholder from "./Placeholder";
 import { useFullscreen } from "../../hooks/useFullscreen";
 import FullscreenButton from "../ui/FullscreenButton";
+
+/**
+ * Custom useEffectEvent implementation for React 19 stable.
+ * Keeps event handlers stable across renders while allowing them to access the latest props/state.
+ */
+function useEffectEvent<Args extends unknown[], Return>(handler: (...args: Args) => Return) {
+  const handlerRef = useRef(handler);
+  useInsertionEffect(() => {
+    handlerRef.current = handler;
+  });
+  return useCallback((...args: Args) => {
+    return handlerRef.current(...args);
+  }, []);
+}
 
 export default function MediaArea() {
   const {
@@ -19,6 +33,37 @@ export default function MediaArea() {
 
   const showPlaceholder = !imgSrc && !cameraStream;
   const hasMedia = !!(cameraStream || imgSrc);
+
+  const isFirstRender = useRef(true);
+
+  const onCameraLoadEvent = useEffectEvent(() => {
+    onCameraLoad();
+  });
+
+  // Restart camera detection and ensure video plays when toggling fullscreen
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    if (cameraStream) {
+      const timer = setTimeout(() => {
+        if (cameraRef.current) {
+          cameraRef.current.play()
+            .then(() => {
+              onCameraLoadEvent();
+            })
+            .catch(err => {
+              console.error("[MediaArea] Error playing video on fullscreen toggle:", err);
+              // Still trigger load/processing in case it's just a browser restriction
+              onCameraLoadEvent();
+            });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isFullscreen, cameraStream, cameraRef]);
 
 
 
